@@ -7,6 +7,8 @@ post_id: 18523
 created: 2014/07/06 20:05:07
 created_gmt: 2014/07/06 15:05:07
 comment_status: open
+image: /assets/article_images/2014-07-06-oracle/desktop.jpg
+
 ---
 
 # Oracle Performance Tuning for Product Support

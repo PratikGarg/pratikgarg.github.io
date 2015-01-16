@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Functional Programming In Java Using Lambdaj</title>
+  <meta name="description" content="" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://myblog.***.***/2010/05/24/functional-programming-in-java-using-lambdaj.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/assets/article_images/2014-07-06-oracle/desktop.jpg)">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">Functional Programming In Java Using Lambdaj</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Pratik Garg</h4>
+              on
+              <time datetime="2010-05-24 00:00">24 May 2010</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+           <!-- <span class="post-reading-time"></span> read-->
+          </div>
+          <a name="topofpage"></a>
+          <h1>Functional Programming in Java Using &quot;lambdaj&quot;</h1>
+
+<p>The new JVM based Post Modern Functional Languages (as creator of Scala, Martin Ordesky named them) like Scala and JRuby which are influenced from both Object Oriented and Functional programming languages  have gone far ahead in the terms of functionality that they offer as compared to Java.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">Apart from the object richness, these languages are loaded with most characteristics of a FL like (first class functions, closures, traits static/dynamic type inference, lazy evaluation, etc) which helps in bringing more modularity to the code and from aesthetics perspective these languages are less verbose and more readable as compared to java.
+
+Few people have put efforts and wrote libraries which can help in leveraging some of these features in Java too. The motivation is not to compete with scala or ruby as they are far ahead. It’s like if you don’t have the option to switch over to these languages (especially scala) or you are still waiting for the Java7 release.
+
+The ones which I have been using are &lt;a href=&quot;http://code.google.com/p/lambdaj/&quot;&gt;lambdaj&lt;/a&gt; written by Mario Fusco and &lt;a href=&quot;http://www.jroller.com/ghettoJedi/entry/enumerable_java_0_2_2&quot;&gt;Enumerable&lt;/a&gt; written by Hakan Raberg. Others I am aware of but not used are &lt;a href=&quot;http://functionalj.sourceforge.net/&quot;&gt;FunctionalJ&lt;/a&gt; and &lt;a href=&quot;file:///C:/Users/Pratik/Desktop/functionaljava.org/&quot;&gt;FunctionalJava&lt;/a&gt; .Most of them provide a similar set of features and differ bit in syntax , it only like the one to which you get accustomed too.
+</code></pre></div>
+<p>lambdaj offers more features compared to Enumerable. Just include the jar and it works, since it uses the proxies for the implementation it’s a bit slow. Enumerable takes different approach for closure support it uses ASM byte code manipulation to capture expressions as closures. So you have to perform an extra simple step of compiling the lamdas before hand.</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">Lets dive into some of the code snippets that we regularly write in java and see how they can be made concise and readable using these libraries.
+
+&lt;span style=&quot;text-decoration: underline;&quot;&gt;Constructs for Collections&lt;/span&gt; - Iterate through a Collection&lt;String&gt; and return a collection&lt;String&gt; starting with &quot;inv&quot;
+
+&lt;em&gt;Using Java&lt;/em&gt;
+
+[sourcecode lang=&quot;java&quot;]
+List&amp;lt;String&amp;gt; list = Arrays.asList(&amp;quot;invalid1&amp;quot;, &amp;quot;invalid2&amp;quot;);
+
+List&amp;lt;String&amp;gt; filteredList = new ArrayList&amp;lt;String&amp;gt;();
+
+for(String string : list) {
+
+  if(string.startsWith(&amp;quot;inv&amp;quot;))
+
+    filteredList.add(string);
+
+}
+return filteredList;
+
+[/sourcecode]
+
+&lt;em&gt;Using lambdaj&lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+ List&amp;lt;String&amp;gt; list = Arrays.asList(&amp;quot;invalid1&amp;quot;, &amp;quot; invalid2&amp;quot;);
+
+return filter(startsWith(&amp;quot;inv&amp;quot;), list);
+[/sourcecode]
+&lt;em&gt;Using Enumerable&lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+List&amp;lt;/span&amp;gt; list = Arrays.asList(&amp;quot;invalid1&amp;quot;, &amp;quot; invalid2&amp;quot;);
+
+return Collect(list,fn(s,s.startsWith(&amp;quot;inv&amp;quot;));
+[/sourcecode]
+Filter/Collect are static methods provided in the lambdaj/Enumerable library which do the actual filtering/collection on collection. &quot;&lt;strong&gt;startsWith&quot;&lt;/strong&gt; is expressed as a hamcrest matcher and the lambda expression fn(s,s.startsWith(&quot;inv&quot;)) will be converted to below , after you do the lambda expression weaving.
+[sourcecode lang=&quot;java&quot;]
+new Fn1() {
+public Object call(Object arg) {
+return (String) arg.startsWith(&amp;quot;inv&amp;quot;);
+}};
+[/sourcecode]
+
+In this case the 6 lines of code are just reduced to 1.
+</code></pre></div>
+<p>Closures</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">We have a scenario where you have search for an employee, compare its name with some pattern and if it matches, send the message. Now gradually you can have more criteria on which you want to match, you want a regex match or don’t want to use ignore case and many more.  For all those cases you will end up duplicating the sendMessage() method with different line instead of the one shown marked with dashes(-).
+
+&lt;em&gt;Using Java&lt;/em&gt;&lt;em&gt; &lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+public boolean  sendMessage(String pattern) {
+
+    FinderService service = context.getService(&amp;quot;finderService&amp;quot;);
+
+    boolean found = false;
+
+        try {
+
+        Employee employee = service.find();
+
+        if (null != employee) {
+
+    --------  if (employee.getName().equalsIgnoreCase(pattern)) -------
+           found = true;
+
+        }
+
+        if(found)  service.sendMessage(&amp;quot;Found the employee&amp;quot;);
+
+       } catch (Exception e) {
+
+         found = false;
+
+       } 
+    return found;  
+}
+
+
+[/sourcecode]
+&lt;em&gt;Using lambdaj&lt;/em&gt;&lt;em&gt; &lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+public boolean sendMessageUsingIgnoreCase() {
+
+    Closure2&amp;lt;Employee, String&amp;gt; ignoreCaseClosure  = closure(Employee.class, String.class);
+
+    {of(this).ignore(var(Employee.class), var(String.class));}
+
+    return sendMessage(&amp;quot;pattern&amp;quot;, ignoreCaseClosure);
+
+}
+
+
+
+public boolean sendMessageUsingRegexCriteria() {
+
+    Closure2&amp;lt;Employee, String&amp;gt; regexClosure   =closure(Employee.class,String.class);
+
+    {of(this).regex(var(Employee.class), var(String.class));}
+
+    return sendMessage(&amp;quot;pattern&amp;quot;, regexClosure);
+}
+
+
+
+private boolean ignore(Employee emp, String pattern) {
+
+    return emp.getName().equalsIgnoreCase(pattern);
+}
+
+
+
+private boolean regex(Employee employee, String pattern) {
+
+    Pattern p = Pattern.compile(pattern);
+
+    return p.matcher(employee.getName()).find();
+
+}
+
+
+
+private boolean sendMessage(String pattern,Closure2&amp;lt;Employee, String&amp;gt; closure) {
+
+        FinderService service = context.getService(&amp;quot;finderService&amp;quot;);
+
+        boolean found = false;
+
+            try {
+
+            Employee employee = service.find();
+
+            if (null != employee) {
+
+    ----------  if ((Boolean) closure.apply(employee, pattern)){ ---------
+               found = true;
+
+            }
+
+            if(found)  service.sendMessage(&amp;quot;Found the employee&amp;quot;);
+
+           } catch (Exception e) {
+
+             found = false;
+
+           } 
+        return found;  
+}
+[/sourcecode]
+We created two closures ignoreCaseClosure and regexClosure which are basically the ignore and regex methods that will be used inside the sendMessage() method . This was you can create as many closures as you want based on different criteria’s and pass them to sendMessage().Here we extracted the logic which is variable and avoid duplication.
+
+
+
+&lt;span style=&quot;text-decoration: underline;&quot;&gt;Matchers&lt;/span&gt;
+
+Consider this code snippet in java, which iterates though a collection and creates a concatenation string in the format &quot;key = Value &amp;amp; key = value &amp;amp;...&quot;.While processing it ignores the entries which have keys starting with &quot;graphType&quot; or &quot;type&quot;.
+
+&lt;em&gt;Using Java&lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+for (Entry&amp;lt;String, String&amp;gt; param : params.entries()) {
+
+    if (!&amp;quot;graphPage&amp;quot;.equals(param.getKey()) &amp;amp;&amp;amp; !&amp;quot;type&amp;quot;.equals(param.getKey())) {
+
+        if (sb == null) {
+
+            sb= &amp;lt;strong&amp;gt;new&amp;lt;/strong&amp;gt; StringBuffer();
+
+    } else {
+
+    sb.append(&#39;&amp;amp;&#39;);
+
+}
+
+sb.append(param.getKey()).append(&#39;=&#39;).append(param.getValue());
+
+[/sourcecode]
+
+&lt;em&gt;Using lambdaj &lt;/em&gt;&lt;em&gt; &lt;/em&gt;
+[sourcecode lang=&quot;java&quot;]
+OrMatcher&amp;lt;String&amp;gt; toExclude = or(equalTo(&amp;quot;type&amp;quot;), equalTo(&amp;quot;graphPage&amp;quot;));
+
+List&amp;lt;Entry&amp;lt;String, String&amp;gt;&amp;gt; paramsList = select(params.entries(),  not(having(on(Entry.class).getKey(), toExclude)));
+
+String graphLink = join(paramsList, &amp;quot;&amp;amp;&amp;quot;);
+[/sourcecode]
+
+The code is almost self explanatory you create an orMatcher for the types to be excluded. Then you apply select on the list using that matcher which return you a List&lt;Entries&gt;. Finally a join on it to return a string of concatenated entries.
+
+There are more features available with these libraries which are quite useful. One way of using them in you application is to create a seperate maven project with the available source code of library and then use it. This is also help in modifying/adding new stuff to the library as per project requirements.
+</code></pre></div>
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Functional+Programming+In+Java+Using+Lambdaj&amp;url=http://myblog.***.***/2010/05/24/functional-programming-in-java-using-lambdaj"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter fa-4x"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Pratik Garg</h4>
+              <p>
+               <div style="padding-left:100px;align:right">
+    
+                
+                  
+                      <a class="icon-twitter" href="https://twitter.com/pratikgarg">
+                        <i class="fa fa-twitter fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-github" href="https://github.com/pratikgarg">
+                        <i class="fa fa-github fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-linkedin" href="https://in.linkedin.com/in/pratikgarg">
+                        <i class="fa fa-linkedin fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+      
+             </div>
+              </p>
+             
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2010-05-24 00:00">24 May 2010</time></p>
+            </section>
+
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Pratik Garg</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/background_image.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Technology &nbsp; &nbsp;  Opinions &nbsp; &nbsp;  Experience</h1>
+        <h2 class="blog-description"></h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    $window.on('scroll', function() {
+      var top = $window.scrollTop();
+
+      if (top < 0 || top > 1500) { return; }
+      $image
+        .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+        .css('opacity', 1-Math.max(top/700, 0));
+    });
+    $window.trigger('scroll');
+
+    var height = $('.article-image').height();
+    $('.post-content').css('padding-top', height + 'px');
+
+    $('a[href*=#]:not([href=#])').click(function() {
+      if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+       && location.hostname == this.hostname) {
+        var target = $(this.hash);
+        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+        if (target.length) {
+          $('html,body').animate({ scrollTop: target.offset().top }, 500);
+          return false;
+        }
+      }
+    });
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

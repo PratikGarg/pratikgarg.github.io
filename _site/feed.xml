@@ -1,107 +1,459 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title></title>
-    <link>http://incorporated.sendtoinc.com</link>
-    <atom:link href="http://incorporated.sendtoinc.com/feed.xml" rel="self" type="application/rss+xml" />
+    <title>Technology &amp;nbsp; &amp;nbsp;  Opinions &amp;nbsp; &amp;nbsp;  Experience</title>
     <description></description>
-    <language>en-us</language>
-    <pubDate>Fri, 16 Jan 2015 11:57:03 +0000</pubDate>
-    <lastBuildDate>Fri, 16 Jan 2015 11:57:03 +0000</lastBuildDate>
-
+    <link>http://myblog.***.***/</link>
+    <atom:link href="http://myblog.***.***/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Fri, 16 Jan 2015 21:58:23 +0530</pubDate>
+    <lastBuildDate>Fri, 16 Jan 2015 21:58:23 +0530</lastBuildDate>
+    <generator>Jekyll v2.5.3</generator>
     
+      <item>
+        <title>Oracle Performance Tuning For Product Support</title>
+        <description>&lt;h1&gt;Oracle Performance Tuning for Product Support&lt;/h1&gt;
+
+&lt;p&gt;In the last post &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot;&gt;SQL Server Performance Tuning for Product Support&lt;/a&gt; we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Performance Tuning&lt;/strong&gt; Compared to the SQL Server database we did not had much issues with Oracle database.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Problem&lt;/strong&gt; As described in the &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot; title=&quot;previous blog&quot;&gt;previous blog&lt;/a&gt; about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information &lt;a href=&quot;http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm&quot; title=&quot;More about Table stats and Optimizer&quot;&gt;(More about Table stats and Optimizer)&lt;/a&gt; present with the database for tables become sort of invalid.&lt;/p&gt;
+
+&lt;p&gt;Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.&lt;/p&gt;
+
+&lt;p&gt;Even if the AUTO GENERATE stats are set to true the auto generated stats may not reflect the correct state. So you will need some mechanism to update stats either using a scheduled job or something else.  &lt;strong&gt;Solution&lt;/strong&gt; In our case each steps updates a LOG TABLE whenever it starts and ends. So we created an AFTER INSERT TRIGGER on that table as given below. This trigger update the statistics of the database whenever a phase starts so the the query optimizer makes the appropriate adjustments based on current state of data.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;CREATE TRIGGER TRIGGERNAME AFTER INSERT ON LOGTABLE REFERENCING NEW AS N FOR EACH ROW BEGIN run_stats(&amp;#39;TABLENAME&amp;#39;); END;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &amp;#39;select table_name from user_tables&amp;#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &amp;#39; where table_name = upper( &amp;#39;&amp;#39;&amp;#39; || p_table_name || &amp;#39;&amp;#39;&amp;#39;) &amp;#39; ; END IF; select sys_context( &amp;#39;USERENV&amp;#39;, &amp;#39;CURRENT_USER&amp;#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&amp;gt;true, method_opt=&amp;gt;&amp;#39;for all columns, size 1&amp;#39; ); end loop; close cv; end run_stats;&lt;/code&gt; &lt;strong&gt;Space Tuning&lt;/strong&gt; &lt;strong&gt;Problem&lt;/strong&gt; Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB )&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) Stored AS (STORAGE IN ROW ENABLED)&lt;/code&gt; As per the oracle documentation when the CLOB is greater the 4000 bytes it will be stored outline else inline.&lt;/p&gt;
+
+&lt;p&gt;When the data is stored in this table for a clob value say &amp;quot;Hello&amp;quot; , the segment information for the &amp;quot;Demo table&amp;quot; and &amp;quot;Demo table LOB segment&amp;quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.&lt;/p&gt;
+
+&lt;p&gt;But when we store a data with total character &amp;gt; 2000 and &amp;lt; 3000 , then the LOB data is going to the LOB segment even though total character are less than 3000.&lt;/p&gt;
+
+&lt;p&gt;Now we couldn&amp;#39;t understand Why the data smaller than 3000 characters is going to the LOB Segment ? . Is that each character takes 2 bytes , which justifies that data till 1500 is going to the data instead of Log Segment because of this Lots of disk space is getting wasted because of the LOB Table , since the CHUNK size is 8kb and the data per block will always be around 3 - 4K character and in some cases exceeding that. So essential for each row 4Kb space is wasted and in our case of 20 mn rows , it was running in 50&amp;#39;s of GBs. Queries that you can use to see the disk usage per segment and per lob&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;select segment_name,blocks from dba_segments where owner = &amp;#39;SchemaName&amp;#39; order by blocks desc; select * from all_lobs where owner = &amp;#39;SchemaName&amp;#39;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Solution&lt;/strong&gt; Solution is use compress the LOB data using High Compression.Initially we were skeptical with this setting because this may have big impact on the performance but of time required to compress/uncompress data during CRUD operations but surprisingly it did not acted that way.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;After the above changes to the required table the space usage went drastically down and the total time degradation was negligible.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Others&lt;/strong&gt; &lt;strong&gt;Using Composite indexes&lt;/strong&gt; As explained in the &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot; title=&quot;previous blog&quot;&gt;previous blog&lt;/a&gt; also, Use composite CLUSTERED/NON CLUSTERED index in you application to fasten the read operations.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Dynamic Sampling&lt;/strong&gt; Set dynamic sampling in Oracle by default to level 4. This setting helps Oracle to pick the best possible plan when no statistics are present for the tables. Oracle will try to pick 64 blocks of records and extrapolate it to choose the right plan. This setting should be set by default and would help mainly for initial first run when no stats are present. &lt;code&gt;ALTER SYSTEM SET OPTIMIZER_DYNAMIC_SAMPLING = 4&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Tools Used During Debugging&lt;/strong&gt; We used oracle Enterprise Manager for quite useful information. Please see some of the screen shots below.&lt;/p&gt;
+
+&lt;p&gt;To Check the explain plain of slow running queries go to &lt;strong&gt;Home --&amp;gt; Performance --&amp;gt; Top Activity --&amp;gt; Select Query --&amp;gt; Plan --&amp;gt; Select Table Radio Option&lt;/strong&gt; &lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/wrw.jpg&quot; alt=&quot;wrw&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;To check the size of current datafiles go to &lt;strong&gt;Home --&amp;gt; Server -&amp;gt; DataFiles&lt;/strong&gt; &lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/Untitled.jpg&quot; alt=&quot;Untitled&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;To Check the current running queries go to &lt;strong&gt;Home --&amp;gt; Performance --&amp;gt; SQL Monitoring&lt;/strong&gt; &lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/Untitled2.jpg&quot; alt=&quot;Untitled2&quot;&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sun, 06 Jul 2014 00:00:00 +0530</pubDate>
+        <link>http://myblog.***.***/2014/07/06/oracle-performance-tuning-for-product-support.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/2014/07/06/oracle-performance-tuning-for-product-support.html</guid>
+        
+        
+      </item>
     
-    <item>
-      <title>Jekyll Incorporated Features</title>
-      <link>http://incorporated.sendtoinc.com/2013/10/08/incorporated/</link>
-      <pubDate>Tue, 08 Oct 2013 00:00:00 +0000</pubDate>
-      <author></author>
-      <guid>http://incorporated.sendtoinc.com/2013/10/08/incorporated</guid>
-      <description>&lt;p&gt;Incorporated provides a great typography, responsive design, author details, semantic markup and more.&lt;/p&gt;
+      <item>
+        <title>Sql Server Performance Tuning For Product Support</title>
+        <description>&lt;h1&gt;SQL Server Performance Tuning for Product Support&lt;/h1&gt;
 
-&lt;p&gt;You can set customize post covers, and other things directly in the post front matter:&lt;/p&gt;
-&lt;div class='highlight'&gt;&lt;pre&gt;&lt;code class='language-yaml' data-lang='yaml'&gt;&lt;span class='l-Scalar-Plain'&gt;layout&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;post&lt;/span&gt;
+&lt;p&gt;&lt;strong&gt;Overview&lt;/strong&gt; For last few months I have been working with a client for developing a product based on Java landscape. As a product it needs to support couple of databases at the back end depending upon the client&amp;#39;s customers requirement and by support I mean database should meet certain benchmarks in terms of time performance and space usage. So I along with couple of more folks have been working on this implementation. Team did not had much expertise in database so issues took bit longer than usual to fade away. In this blog I would like to share some problems that we faced and how we resolved them.&lt;/p&gt;
 
-&lt;span class='l-Scalar-Plain'&gt;title&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;Jekyll Incorporated Features&lt;/span&gt;
-&lt;span class='l-Scalar-Plain'&gt;subtitle&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='s'&gt;&amp;quot;What&amp;#39;s&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;in&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;the&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;box&amp;quot;&lt;/span&gt;
+&lt;p&gt;&lt;strong&gt;Overview of Application&lt;/strong&gt; Application is a pipeline of steps/phases, where first phase takes input as a file (.txt | .csv)  having 1 to mn records, stores them in the database and then the next subsequent steps do processing over that stored dataand final step produces a new file containing with transformed records. The transformations performed on the data interesting only in terms of business, so not going into those details. Some of the phases make heavy use of Multithreading to process non overlapped data to increase the performance and better utilize the CPU Cores. The application already supports &lt;strong&gt;DB2&lt;/strong&gt; database and the complete processing finishes with in a given time and space.&lt;/p&gt;
 
-&lt;span class='c1'&gt;# Setup post cover image in /images/&lt;/span&gt;
-&lt;span class='l-Scalar-Plain'&gt;cover_image&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;blog-cover.jpg&lt;/span&gt;
+&lt;p&gt;&lt;strong&gt;Technologies Used in Application&lt;/strong&gt;&lt;/p&gt;
 
-&lt;span class='l-Scalar-Plain'&gt;excerpt&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='s'&gt;&amp;quot;Incorporated&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;provides&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;a&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;great&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;typography,&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;responsive&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;design,&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;author&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;details,&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;semantic&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;markup&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;and&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;more.&amp;quot;&lt;/span&gt;
+&lt;ul&gt;
+&lt;li&gt;Java &amp;amp; Apache Camel for the pipeline described above.&lt;/li&gt;
+&lt;li&gt;Apache MetaModel (Incubator) as ORM
+&lt;strong&gt;Performance Tuning&lt;/strong&gt; Team had least exposure to this database and the reason being this database rarely finds its place in the Java world but anyways we had to support it.  &lt;strong&gt;Initial Test&lt;/strong&gt; So starting with few records pushed to the pipeline. There were some errors in processing but mostly due to the SQL syntax errors or datatype mismatch but nonetheless the complete processing did happen successfully.&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;span class='c1'&gt;# Author details, including Google Plus authorship&lt;/span&gt;
-&lt;span class='l-Scalar-Plain'&gt;author&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;name&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;Karri Saarinen&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;twitter&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;karrisaarinen&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;gplus&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;100687498195339762535&lt;/span&gt; 
-  &lt;span class='l-Scalar-Plain'&gt;bio&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;Co-founder, Design&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;image&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;ks.jpg&lt;/span&gt;
-  
-&lt;span class='c1'&gt;# Keep it as draft, not published in index.html or feed.xml&lt;/span&gt;
-&lt;span class='l-Scalar-Plain'&gt;draft&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;h4 id=&quot;configurable__code_snipped_highlighting&quot;&gt;Configurable &amp;amp; Code Snipped Highlighting&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;First Blocker&lt;/strong&gt; Next step was to run the pipeline with a bigger data set. The processing got suspended in one of the phases. Fired the below query to see queries blocking each other. &lt;code&gt;SELECT sqltext.TEXT,req.session_id,req.status, req.command,req.cpu_time,req.total_elapsed_time, sqlplan.query_plan,W.* FROM sys.dm_exec_requests req CROSS APPLY sys.dm_exec_sql_text(sql_handle) AS sqltext CROSS APPLY sys.dm_exec_query_plan(plan_handle) AS sqlplan left join sys.dm_os_waiting_tasks W on W.session_id = req.session_id&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;/assets/stylesheets/main.scss:&lt;/p&gt;
-&lt;div class='highlight'&gt;&lt;pre&gt;&lt;code class='language-scss' data-lang='scss'&gt;&lt;span class='cm'&gt;/* Bodytext font */&lt;/span&gt;
-&lt;span class='nv'&gt;$font&lt;/span&gt;&lt;span class='o'&gt;:&lt;/span&gt; &lt;span class='s2'&gt;&amp;quot;Droid Sans&amp;quot;&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='s2'&gt;&amp;quot;Helvetica Neue&amp;quot;&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='n'&gt;Helvetica&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='n'&gt;Arial&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='no'&gt;sans-serif&lt;/span&gt;&lt;span class='p'&gt;;&lt;/span&gt;
+&lt;p&gt;Figured out that a long running SELECT Query on TABLE A is blocking the smaller UPDATE queries on the same TABLE A . The SELECT query (a long running transaction) is an iterator over records to fetch X records each time from the database and then those X fetched records were divided and processed separately by threads which fire UPDATE query on the same table. This results in the suspension of UPDATE query.&lt;/p&gt;
 
-&lt;span class='cm'&gt;/* Font for headings */&lt;/span&gt;
-&lt;span class='nv'&gt;$fontheadings&lt;/span&gt;&lt;span class='o'&gt;:&lt;/span&gt; &lt;span class='s2'&gt;&amp;quot;Droid Sans&amp;quot;&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='s2'&gt;&amp;quot;Helvetica Neue&amp;quot;&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='n'&gt;Helvetica&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='n'&gt;Arial&lt;/span&gt;&lt;span class='o'&gt;,&lt;/span&gt; &lt;span class='no'&gt;sans-serif&lt;/span&gt;&lt;span class='p'&gt;;&lt;/span&gt;
+&lt;p&gt;&lt;strong&gt;Solution&lt;/strong&gt; *&lt;em&gt;So changing the transaction level to READ&lt;em&gt;COMMITTED&lt;/em&gt;SNAPSHOT ON  to resolve this issue. *&lt;/em&gt;More details about this issue can be found here &lt;a href=&quot;http://msdn.microsoft.com/en-us/library/tcbchxcb(v=vs.110).aspx&quot;&gt;http://msdn.microsoft.com/en-us/library/tcbchxcb(v=vs.110).aspx&lt;/a&gt;&lt;/p&gt;
 
-&lt;span class='cm'&gt;/* Text colors */&lt;/span&gt;
-&lt;span class='nv'&gt;$text&lt;/span&gt;&lt;span class='o'&gt;:&lt;/span&gt; &lt;span class='mh'&gt;#21272d&lt;/span&gt;&lt;span class='p'&gt;;&lt;/span&gt;
-&lt;span class='nv'&gt;$textmuted&lt;/span&gt;&lt;span class='o'&gt;:&lt;/span&gt; &lt;span class='mh'&gt;#848484&lt;/span&gt;&lt;span class='p'&gt;;&lt;/span&gt;
-&lt;span class='nv'&gt;$accent&lt;/span&gt;&lt;span class='o'&gt;:&lt;/span&gt; &lt;span class='mh'&gt;#2077b2&lt;/span&gt;&lt;span class='p'&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;config.yml:&lt;/p&gt;
-&lt;div class='highlight'&gt;&lt;pre&gt;&lt;code class='language-yaml' data-lang='yaml'&gt;&lt;span class='l-Scalar-Plain'&gt;inc&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;
-  &lt;span class='c1'&gt;# Blog Information&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;title&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;        &lt;span class='s'&gt;&amp;quot;Jekyll&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;Incorporated&amp;quot;&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;subtitle&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;     &lt;span class='s'&gt;&amp;quot;Modern&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;Jekyll&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;based&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;blog&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;for&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;companies&amp;quot;&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;cover_image&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;  &lt;span class='l-Scalar-Plain'&gt;blog-cover.jpg&lt;/span&gt;
-  
-  &lt;span class='c1'&gt;# Company information&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;company&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;      &lt;span class='l-Scalar-Plain'&gt;Incorporated&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;url&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;          &lt;span class='l-Scalar-Plain'&gt;http://incorporated.sendtoinc.com/&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;facebook&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;     &lt;span class='l-Scalar-Plain'&gt;sendtoinc&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;twitter&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;      &lt;span class='l-Scalar-Plain'&gt;sendtoinc&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;about_link&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;   &lt;span class='l-Scalar-Plain'&gt;https://sendtoinc.com/about/&lt;/span&gt;
-  
-  &lt;span class='c1'&gt;# Product Information&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;product_link&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; &lt;span class='l-Scalar-Plain'&gt;http://incorporated.sendtoinc.com/&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;tagline&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;      &lt;span class='s'&gt;&amp;quot;Get&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;a&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;modern&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;blog&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;for&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;your&lt;/span&gt;&lt;span class='nv'&gt; &lt;/span&gt;&lt;span class='s'&gt;company&amp;quot;&lt;/span&gt;
-  
-  &lt;span class='c1'&gt;# Comments&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;disqus&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;
-    &lt;span class='c1'&gt;# Eg. &amp;quot;exampleblog&amp;quot; Set to false to disable comments&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;shortname&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;  &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;
-  
-  
-  &lt;span class='c1'&gt;# Sharing settings&lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;sharing&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;twitter&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;    &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;facebook&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;   &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;gplus&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;      &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;hn&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;         &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;
+&lt;p&gt;&lt;strong&gt;Second Blocker&lt;/strong&gt; Some of the phases in the execution pipeline were really slow. So first thing that comes to mind is about the indexes not being correctly implemented. To verify that we need to see the explain plan of queries. SQL server comes with an Activity Monitor Tool. This tool gives quite useful information separated across sections . Please see snapshot below&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/Screenshot-from-2014-07-02-200601.png&quot; alt=&quot;Screenshot from 2014-07-02 20:06:01&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/Stats.jpg&quot; alt=&quot;Stats&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;Select the query from the long running transactions and see the execution plan by right clicking on it. Now the execution plan doesn&amp;#39;t tells much about the slowness of the query though it will give the relative percentages of the execution time. So to actually see how much this query is taking time. Select the same query from the &lt;strong&gt;processes section&lt;/strong&gt; and right click to analyse in profiler. There we can find out the quantified time for the query. The profiler showed us that each query is taking .5 sec to 1 sec to execute which is way too slow than expected.  Again looked at  index scripts and found out that both the clustered and non clustered indexes were more or less applied correctly as per the guidelines mentioned. Below are some of those guidelines&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Clustered Index :-&lt;/strong&gt; This Index defines how the data is stored and sorted in the table based on a particular key. Can be only one per table. Generally created using Primary Key or Candidate Keys. Also please note the &lt;strong&gt;FILLFACTOR=80&lt;/strong&gt;. This setting may end up taking more space but will speed up the index operations. &lt;code&gt;CREATE UNIQUE CLUSTERED INDEX [IDX] ON [DBO].[TABLE] ( [COL1] ASC, [COL2] ASC )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = OFF, FILLFACTOR=80) ON [PRIMARY];&lt;/code&gt; *&lt;em&gt;Non Clustered Index :- *&lt;/em&gt;Can be more than one in the table, Should be created on the columns which appear in the queries and also use composite index on all the keys of the same table that appear in a query. &lt;code&gt;CREATE NONCLUSTERED INDEX [IDX] ON [DBO].[TABLE] ( [Col1] ASC, [Col2] ASC, [Col3] ASC )WITH (SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF,ALLOW_PAGE_LOCKS = OFF, ALLOW_ROW_LOCKS= ON) ON [PRIMARY]&lt;/code&gt; So even after loads of permutation and combination for indexes we got no performance improvement. Which probably means indexes were already correct. We let the processing run with whatever time its taking.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Third Blocker&lt;/strong&gt; Next we ran into deadlock issues in of the phases. This phases involved multiple threads from the application adding/updating/deleting rows across the &lt;strong&gt;same and different tables&lt;/strong&gt; but none of the threads overlaps with the rows to be updated in the tables. So it appeared that the queries are taking table level locks on indexes/tables. To avoid that we updated the tables and indexes with below settings. With these setting we still got the deadlock so apparently the issue was something else.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;ALTER INDEX ... WITH (ALLOW_PAGE_LOCKS = OFF, ALLOW_ROW_LOCKS = ON); ALTER TABLE SET LOCK_ESCALATION OFF&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Also profiled the queries (&lt;strong&gt;Go to Tool -&amp;gt; SQL Server Profile -&amp;gt; Start New Trace -&amp;gt; Show All Events -&amp;gt; Select All Deadlock Events&lt;/strong&gt;). Though there were deadlock Events but no lock escalation.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2014/07/m7AKT.png&quot; alt=&quot;m7AKT&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;*&lt;em&gt;Solution *&lt;/em&gt;&lt;/p&gt;
+</description>
+        <pubDate>Thu, 03 Jul 2014 00:00:00 +0530</pubDate>
+        <link>http://myblog.***.***/2014/07/03/sql-server-performance-tuning-for-product-support.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/2014/07/03/sql-server-performance-tuning-for-product-support.html</guid>
+        
+        <category>SQL</category>
+        
+        <category>Server</category>
+        
+        <category>Performance</category>
+        
+        <category>Tuning</category>
+        
+        
+      </item>
     
-  
- &lt;span class='c1'&gt;# Analytics     &lt;/span&gt;
-  &lt;span class='l-Scalar-Plain'&gt;analytics&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;
-    &lt;span class='l-Scalar-Plain'&gt;google&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt; 
-      &lt;span class='c1'&gt;# eg. &amp;#39;UA-123-12&amp;#39;&lt;/span&gt;
-      &lt;span class='l-Scalar-Plain'&gt;id&lt;/span&gt;&lt;span class='p-Indicator'&gt;:&lt;/span&gt;       &lt;span class='l-Scalar-Plain'&gt;false&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;Zoomable images&lt;/strong&gt;&lt;/p&gt;
-&lt;div class='full zoomable'&gt;&lt;img src='/images/incorporated.jpg' /&gt;&lt;/div&gt;
-&lt;p&gt;&lt;strong&gt;Awesome quotes&lt;/strong&gt;&lt;/p&gt;
+      <item>
+        <title>Liferay Service Builder Finders</title>
+        <description>&lt;h1&gt;Liferay Service Builder Finders&lt;/h1&gt;
 
-&lt;blockquote&gt;
-&lt;p&gt;“Effective companies tend to communicate more, their people are curious and they have opinions”&lt;/p&gt;
-&lt;/blockquote&gt;
+&lt;p&gt;In the last post we saw how Liferay service builder helps in generation of Services and Dao/Persistence classes which perform the basic CRUD operations. Along with the basic crud operation liferay also comes with some finder module methods using which can be used to find entities based upon one or more of the fields present in it. Let’s continue with the example of email entity to better insights on finders.&lt;/p&gt;
 
-&lt;p&gt;Stay tuned for updates.&lt;/p&gt;</description>
-    </item>
+&lt;p&gt;*&lt;em&gt;Email Example Extended *&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Suppose we want to search for emails based upon the following two criteria&amp;#39;s &lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Subject matching to a particular text string&lt;/li&gt;
+&lt;li&gt;Email from a particular user
+Add the following xml inside the email entry declared in service.xml&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] &amp;lt;!-- Finders --&amp;gt; &lt;finder return-type=&quot;Collection&quot; name=&quot;Subject&quot;&gt; &lt;finder-column name=&quot;subject&quot;&gt;&lt;/finder-column&gt; &lt;/finder&gt; &lt;finder return-type=&quot;Collection&quot; name=&quot;From&quot;&gt; &lt;finder-column name=&quot;from&quot;&gt;&lt;/finder-column&gt; &lt;/finder&gt; [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;For the above declaration, we will see the following method in EmailPersistence and their implementation in EmailPersistenceImpl&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] public java.util.List&lt;com.xebia.model.email&gt; findBySubject( java.lang.String subject) throws com.liferay.portal.kernel.exception.SystemException;&lt;/p&gt;
+
+&lt;p&gt;public java.util.List&lt;com.xebia.model.email&gt; findByFrom( java.lang.String from) throws com.liferay.portal.kernel.exception.SystemException; [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;There are some additional helper methods generated for accessing data corresponding to these fields. These methods can be used to find count or limit the number of results etc.&lt;/p&gt;
+
+&lt;p&gt;Now an additional requirement is, to find all emails that are received on a particular date i.e. within those 24 hours. The first thing that will come to mind is the &amp;quot;Where&amp;quot; clause. But there is no out of the box facility available in liferay that will automatically generate this method. The only only solution for these type of cases is writing a custom sql query and using the finder functionality to execute this query and return the results.&lt;/p&gt;
+
+&lt;hr&gt;
+
+&lt;p&gt;&lt;strong&gt;Configuration&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Lets first start with writing of the custom query which will help us in retrieving all the emails between two dates. Our query will look like this&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] SELECT Email.* FROM Email WHERE Email.date between ? AND ? [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;Include this sql in /docroot/WEB-INF/src/custom-sql/default.xml file. So that default.xml sql will look something like this&lt;/p&gt;
+
+&lt;p&gt;Note : Portlet structure should adhere to liferay standards and we have to create a custom-sql folder inside src and then create a file default.xml&lt;/p&gt;
+
+&lt;p&gt;We can also create custom file and then mention the reference of that file in default.xml.&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] &amp;lt;!--?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;UTF-8&amp;quot;?--&amp;gt; &lt;custom-sql&gt; &lt;sql id=&quot;com.xebia.service.persistence.EmailFinder.getEmailBetweenDates&quot;&gt; &amp;lt;![CDATA[ SELECT Email.* FROM Email WHERE Email.date between ? AND ? ]]&amp;gt; &lt;/sql&gt; &lt;/custom-sql&gt; [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;the id attribute is the unique identifier through which this query is recognized.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Code Generation&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;We will be calling this query from finder class of liferay. Following are the steps for code generation for Liferay finder classes&lt;/p&gt;
+
+&lt;p&gt;Create a class EmailFinderImpl in the persistence package and Extend this class from EmailPersistenceImpl&lt;/p&gt;
+
+&lt;p&gt;Run ant build-service. This will generate the EmailFinder interface and EmailFinderUtil&lt;/p&gt;
+
+&lt;p&gt;Now go to EmailFinderImpl and make it implement EmailFinder&lt;/p&gt;
+
+&lt;p&gt;After this add a method in EmailFinderImpl and will run service builder, the same method will be reflected in EmailFinder interface and EmailFinderUtil class as well.&lt;/p&gt;
+
+&lt;p&gt;The class hierarchy and structure of Finder is almost similar to the structure of services which were shown in the last blog. Following is the class diagram for Finder.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://xebee.xebia.in/wp-content/uploads/2012/05/finder_class_diag.png&quot; alt=&quot;&quot; title=&quot;finder_class_diag&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] public static String GET&lt;em&gt;EMAIL&lt;/em&gt;BETWEEN_DATES = EmailFinder.class .getName() + &amp;quot;.getEmailBetweenDates&amp;quot;;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;public List&amp;amp;lt;email&amp;amp;gt; getEmailBetweenDates(Date startDate,Date endDate) throws ParseException, SystemException {
+
+    Session session = null;
+    List&amp;amp;lt;email&amp;amp;gt; emails = null;
+    try {
+        session = openSession();
+
+        String sql = CustomSQLUtil.get(GET_EMAIL_BETWEEN_DATES);
+        SQLQuery q = session.createSQLQuery(sql);
+
+        q.addEntity(&amp;amp;quot;Email&amp;amp;quot;, EmailImpl.class);
+        QueryPos qPos = QueryPos.getInstance(q);
+
+        qPos.add(startDate);
+        qPos.add(endDate);
+
+        emails = (List&amp;amp;lt;email&amp;amp;gt;) q.list();
+        if (emails == null) {
+            emails = Collections.emptyList();
+                                 }
+           } finally {
+        closeSession(session);
+     }
+
+    return emails;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;[/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Code Utilization&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Calling of the finder methods is almost same as calling any of the service methods.&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] List&lt;email&gt; emailsByDate = EmailFinderUtil.getEmailBetweenDates(Date startDate, Date endDate); [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Object Mappings&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;So far we have seen how to perform cruds and advanced search on a entity. Now let’s consider this example.&lt;/p&gt;
+
+&lt;p&gt;Fetch all the emails that have an attachments.&lt;/p&gt;
+
+&lt;p&gt;At Database Level : we will have an Email table and an Attachment table with email Id as the foreign key to support one-to-many relationships.&lt;/p&gt;
+
+&lt;p&gt;At Object level : we will have an Email object with Collection of type attachment as one of properties.&lt;/p&gt;
+
+&lt;p&gt;When we retrieve the email we also expect the attachement to get populated and vice-versa during the save (Given that we have done the required relationship mappings between the entities in service.xml).&lt;/p&gt;
+
+&lt;p&gt;But this is not how it works in the liferay. We cannot create a relation between the entities using the service.xml which basically means no work will be done automatically either at the DB level (foreign keys) and at object level (has a relationship) , yes there are workarounds but out of the box this is not provided. In the liferay &lt;a href=&quot;http://www.liferay.com/dtd/liferay-service-builder_5_2_0.dtd%20&quot;&gt;DTD&lt;/a&gt; for service.xml , there is section that will describe how to create one-2-one / many-2-many relationships but even if we follow that convention , service builder will not create the mappings in generated java classes. This is how the attachment entity will look like.&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;] &lt;entity name=&quot;Attachment&quot; local-service=&quot;true&quot; remote-service=&quot;false&quot; table=&quot;Email&quot;&gt; &lt;column name=&quot;id&quot; type=&quot;long&quot; primary=&quot;true&quot;&gt; &lt;column name=&quot;type&quot; type=&quot;String&quot;&gt; &lt;column name=&quot;emailId&quot; type=&quot;long&quot;&gt; &lt;column name=&quot;content&quot; type=&quot;String&quot;&gt; &amp;lt;!-- Finders --&amp;gt; &lt;finder name=&quot;id&quot;&gt; &lt;finder-column name=&quot;to&quot;&gt;&lt;/finder-column&gt; &lt;/finder&gt; &lt;finder name=&quot;emailId&quot; return-type=&quot;Collection&quot;&gt; &lt;finder-column name=&quot;from&quot;&gt;&lt;/finder-column&gt; &lt;/finder&gt; &lt;/column&gt;&lt;/column&gt;&lt;/column&gt;&lt;/column&gt;&lt;/entity&gt; [/sourcecode]&lt;/p&gt;
+
+&lt;p&gt;To achieve the above scenario : 1) Create an EmailDTO to contain email and its corresponding Attachment. Code below&lt;/p&gt;
+
+&lt;p&gt;[sourcecode language=&amp;quot;xml&amp;quot;]&lt;/p&gt;
+
+&lt;p&gt;public EmailDTO{ private Email; private Attachment;&lt;/p&gt;
+</description>
+        <pubDate>Sun, 17 Jun 2012 00:00:00 +0530</pubDate>
+        <link>http://myblog.***.***/2012/06/17/liferay-service-builder-finders.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/2012/06/17/liferay-service-builder-finders.html</guid>
+        
+        
+      </item>
     
-    
+      <item>
+        <title>Functional Programming In Java Using Lambdaj</title>
+        <description>&lt;h1&gt;Functional Programming in Java Using &amp;quot;lambdaj&amp;quot;&lt;/h1&gt;
 
-  </channel> 
+&lt;p&gt;The new JVM based Post Modern Functional Languages (as creator of Scala, Martin Ordesky named them) like Scala and JRuby which are influenced from both Object Oriented and Functional programming languages  have gone far ahead in the terms of functionality that they offer as compared to Java.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;Apart from the object richness, these languages are loaded with most characteristics of a FL like (first class functions, closures, traits static/dynamic type inference, lazy evaluation, etc) which helps in bringing more modularity to the code and from aesthetics perspective these languages are less verbose and more readable as compared to java.
+
+Few people have put efforts and wrote libraries which can help in leveraging some of these features in Java too. The motivation is not to compete with scala or ruby as they are far ahead. It’s like if you don’t have the option to switch over to these languages (especially scala) or you are still waiting for the Java7 release.
+
+The ones which I have been using are &amp;lt;a href=&amp;quot;http://code.google.com/p/lambdaj/&amp;quot;&amp;gt;lambdaj&amp;lt;/a&amp;gt; written by Mario Fusco and &amp;lt;a href=&amp;quot;http://www.jroller.com/ghettoJedi/entry/enumerable_java_0_2_2&amp;quot;&amp;gt;Enumerable&amp;lt;/a&amp;gt; written by Hakan Raberg. Others I am aware of but not used are &amp;lt;a href=&amp;quot;http://functionalj.sourceforge.net/&amp;quot;&amp;gt;FunctionalJ&amp;lt;/a&amp;gt; and &amp;lt;a href=&amp;quot;file:///C:/Users/Pratik/Desktop/functionaljava.org/&amp;quot;&amp;gt;FunctionalJava&amp;lt;/a&amp;gt; .Most of them provide a similar set of features and differ bit in syntax , it only like the one to which you get accustomed too.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;lambdaj offers more features compared to Enumerable. Just include the jar and it works, since it uses the proxies for the implementation it’s a bit slow. Enumerable takes different approach for closure support it uses ASM byte code manipulation to capture expressions as closures. So you have to perform an extra simple step of compiling the lamdas before hand.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;Lets dive into some of the code snippets that we regularly write in java and see how they can be made concise and readable using these libraries.
+
+&amp;lt;span style=&amp;quot;text-decoration: underline;&amp;quot;&amp;gt;Constructs for Collections&amp;lt;/span&amp;gt; - Iterate through a Collection&amp;lt;String&amp;gt; and return a collection&amp;lt;String&amp;gt; starting with &amp;quot;inv&amp;quot;
+
+&amp;lt;em&amp;gt;Using Java&amp;lt;/em&amp;gt;
+
+[sourcecode lang=&amp;quot;java&amp;quot;]
+List&amp;amp;lt;String&amp;amp;gt; list = Arrays.asList(&amp;amp;quot;invalid1&amp;amp;quot;, &amp;amp;quot;invalid2&amp;amp;quot;);
+
+List&amp;amp;lt;String&amp;amp;gt; filteredList = new ArrayList&amp;amp;lt;String&amp;amp;gt;();
+
+for(String string : list) {
+
+  if(string.startsWith(&amp;amp;quot;inv&amp;amp;quot;))
+
+    filteredList.add(string);
+
+}
+return filteredList;
+
+[/sourcecode]
+
+&amp;lt;em&amp;gt;Using lambdaj&amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+ List&amp;amp;lt;String&amp;amp;gt; list = Arrays.asList(&amp;amp;quot;invalid1&amp;amp;quot;, &amp;amp;quot; invalid2&amp;amp;quot;);
+
+return filter(startsWith(&amp;amp;quot;inv&amp;amp;quot;), list);
+[/sourcecode]
+&amp;lt;em&amp;gt;Using Enumerable&amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+List&amp;amp;lt;/span&amp;amp;gt; list = Arrays.asList(&amp;amp;quot;invalid1&amp;amp;quot;, &amp;amp;quot; invalid2&amp;amp;quot;);
+
+return Collect(list,fn(s,s.startsWith(&amp;amp;quot;inv&amp;amp;quot;));
+[/sourcecode]
+Filter/Collect are static methods provided in the lambdaj/Enumerable library which do the actual filtering/collection on collection. &amp;quot;&amp;lt;strong&amp;gt;startsWith&amp;quot;&amp;lt;/strong&amp;gt; is expressed as a hamcrest matcher and the lambda expression fn(s,s.startsWith(&amp;quot;inv&amp;quot;)) will be converted to below , after you do the lambda expression weaving.
+[sourcecode lang=&amp;quot;java&amp;quot;]
+new Fn1() {
+public Object call(Object arg) {
+return (String) arg.startsWith(&amp;amp;quot;inv&amp;amp;quot;);
+}};
+[/sourcecode]
+
+In this case the 6 lines of code are just reduced to 1.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Closures&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;We have a scenario where you have search for an employee, compare its name with some pattern and if it matches, send the message. Now gradually you can have more criteria on which you want to match, you want a regex match or don’t want to use ignore case and many more.  For all those cases you will end up duplicating the sendMessage() method with different line instead of the one shown marked with dashes(-).
+
+&amp;lt;em&amp;gt;Using Java&amp;lt;/em&amp;gt;&amp;lt;em&amp;gt; &amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+public boolean  sendMessage(String pattern) {
+
+    FinderService service = context.getService(&amp;amp;quot;finderService&amp;amp;quot;);
+
+    boolean found = false;
+
+        try {
+
+        Employee employee = service.find();
+
+        if (null != employee) {
+
+    --------  if (employee.getName().equalsIgnoreCase(pattern)) -------
+           found = true;
+
+        }
+
+        if(found)  service.sendMessage(&amp;amp;quot;Found the employee&amp;amp;quot;);
+
+       } catch (Exception e) {
+
+         found = false;
+
+       } 
+    return found;  
+}
+
+
+[/sourcecode]
+&amp;lt;em&amp;gt;Using lambdaj&amp;lt;/em&amp;gt;&amp;lt;em&amp;gt; &amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+public boolean sendMessageUsingIgnoreCase() {
+
+    Closure2&amp;amp;lt;Employee, String&amp;amp;gt; ignoreCaseClosure  = closure(Employee.class, String.class);
+
+    {of(this).ignore(var(Employee.class), var(String.class));}
+
+    return sendMessage(&amp;amp;quot;pattern&amp;amp;quot;, ignoreCaseClosure);
+
+}
+
+
+
+public boolean sendMessageUsingRegexCriteria() {
+
+    Closure2&amp;amp;lt;Employee, String&amp;amp;gt; regexClosure   =closure(Employee.class,String.class);
+
+    {of(this).regex(var(Employee.class), var(String.class));}
+
+    return sendMessage(&amp;amp;quot;pattern&amp;amp;quot;, regexClosure);
+}
+
+
+
+private boolean ignore(Employee emp, String pattern) {
+
+    return emp.getName().equalsIgnoreCase(pattern);
+}
+
+
+
+private boolean regex(Employee employee, String pattern) {
+
+    Pattern p = Pattern.compile(pattern);
+
+    return p.matcher(employee.getName()).find();
+
+}
+
+
+
+private boolean sendMessage(String pattern,Closure2&amp;amp;lt;Employee, String&amp;amp;gt; closure) {
+
+        FinderService service = context.getService(&amp;amp;quot;finderService&amp;amp;quot;);
+
+        boolean found = false;
+
+            try {
+
+            Employee employee = service.find();
+
+            if (null != employee) {
+
+    ----------  if ((Boolean) closure.apply(employee, pattern)){ ---------
+               found = true;
+
+            }
+
+            if(found)  service.sendMessage(&amp;amp;quot;Found the employee&amp;amp;quot;);
+
+           } catch (Exception e) {
+
+             found = false;
+
+           } 
+        return found;  
+}
+[/sourcecode]
+We created two closures ignoreCaseClosure and regexClosure which are basically the ignore and regex methods that will be used inside the sendMessage() method . This was you can create as many closures as you want based on different criteria’s and pass them to sendMessage().Here we extracted the logic which is variable and avoid duplication.
+
+
+
+&amp;lt;span style=&amp;quot;text-decoration: underline;&amp;quot;&amp;gt;Matchers&amp;lt;/span&amp;gt;
+
+Consider this code snippet in java, which iterates though a collection and creates a concatenation string in the format &amp;quot;key = Value &amp;amp;amp; key = value &amp;amp;amp;...&amp;quot;.While processing it ignores the entries which have keys starting with &amp;quot;graphType&amp;quot; or &amp;quot;type&amp;quot;.
+
+&amp;lt;em&amp;gt;Using Java&amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+for (Entry&amp;amp;lt;String, String&amp;amp;gt; param : params.entries()) {
+
+    if (!&amp;amp;quot;graphPage&amp;amp;quot;.equals(param.getKey()) &amp;amp;amp;&amp;amp;amp; !&amp;amp;quot;type&amp;amp;quot;.equals(param.getKey())) {
+
+        if (sb == null) {
+
+            sb= &amp;amp;lt;strong&amp;amp;gt;new&amp;amp;lt;/strong&amp;amp;gt; StringBuffer();
+
+    } else {
+
+    sb.append(&amp;#39;&amp;amp;amp;&amp;#39;);
+
+}
+
+sb.append(param.getKey()).append(&amp;#39;=&amp;#39;).append(param.getValue());
+
+[/sourcecode]
+
+&amp;lt;em&amp;gt;Using lambdaj &amp;lt;/em&amp;gt;&amp;lt;em&amp;gt; &amp;lt;/em&amp;gt;
+[sourcecode lang=&amp;quot;java&amp;quot;]
+OrMatcher&amp;amp;lt;String&amp;amp;gt; toExclude = or(equalTo(&amp;amp;quot;type&amp;amp;quot;), equalTo(&amp;amp;quot;graphPage&amp;amp;quot;));
+
+List&amp;amp;lt;Entry&amp;amp;lt;String, String&amp;amp;gt;&amp;amp;gt; paramsList = select(params.entries(),  not(having(on(Entry.class).getKey(), toExclude)));
+
+String graphLink = join(paramsList, &amp;amp;quot;&amp;amp;amp;&amp;amp;quot;);
+[/sourcecode]
+
+The code is almost self explanatory you create an orMatcher for the types to be excluded. Then you apply select on the list using that matcher which return you a List&amp;lt;Entries&amp;gt;. Finally a join on it to return a string of concatenated entries.
+
+There are more features available with these libraries which are quite useful. One way of using them in you application is to create a seperate maven project with the available source code of library and then use it. This is also help in modifying/adding new stuff to the library as per project requirements.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</description>
+        <pubDate>Mon, 24 May 2010 00:00:00 +0530</pubDate>
+        <link>http://myblog.***.***/2010/05/24/functional-programming-in-java-using-lambdaj.html</link>
+        <guid isPermaLink="true">http://myblog.***.***/2010/05/24/functional-programming-in-java-using-lambdaj.html</guid>
+        
+        
+      </item>
+    
+  </channel>
 </rss>

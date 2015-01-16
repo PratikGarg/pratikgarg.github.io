@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Oracle Performance Tuning For Product Support</title>
+  <meta name="description" content="" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://myblog.***.***/2014/07/06/oracle-performance-tuning-for-product-support.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/assets/article_images/2014-07-06-oracle/desktop.jpg)">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">Oracle Performance Tuning For Product Support</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Pratik Garg</h4>
+              on
+              <time datetime="2014-07-06 00:00">06 Jul 2014</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+           <!-- <span class="post-reading-time"></span> read-->
+          </div>
+          <a name="topofpage"></a>
+          <h1>Oracle Performance Tuning for Product Support</h1>
+
+<p>In the last post <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/">SQL Server Performance Tuning for Product Support</a> we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.</p>
+
+<p><strong>Performance Tuning</strong> Compared to the SQL Server database we did not had much issues with Oracle database.</p>
+
+<p><strong>Problem</strong> As described in the <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/" title="previous blog">previous blog</a> about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information <a href="http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm" title="More about Table stats and Optimizer">(More about Table stats and Optimizer)</a> present with the database for tables become sort of invalid.</p>
+
+<p>Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.</p>
+
+<p>Even if the AUTO GENERATE stats are set to true the auto generated stats may not reflect the correct state. So you will need some mechanism to update stats either using a scheduled job or something else.  <strong>Solution</strong> In our case each steps updates a LOG TABLE whenever it starts and ends. So we created an AFTER INSERT TRIGGER on that table as given below. This trigger update the statistics of the database whenever a phase starts so the the query optimizer makes the appropriate adjustments based on current state of data.</p>
+
+<p><code>CREATE TRIGGER TRIGGERNAME AFTER INSERT ON LOGTABLE REFERENCING NEW AS N FOR EACH ROW BEGIN run_stats(&#39;TABLENAME&#39;); END;</code></p>
+
+<p><code>CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &#39;select table_name from user_tables&#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &#39; where table_name = upper( &#39;&#39;&#39; || p_table_name || &#39;&#39;&#39;) &#39; ; END IF; select sys_context( &#39;USERENV&#39;, &#39;CURRENT_USER&#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&gt;true, method_opt=&gt;&#39;for all columns, size 1&#39; ); end loop; close cv; end run_stats;</code> <strong>Space Tuning</strong> <strong>Problem</strong> Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.</p>
+
+<p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB )</code></p>
+
+<p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) Stored AS (STORAGE IN ROW ENABLED)</code> As per the oracle documentation when the CLOB is greater the 4000 bytes it will be stored outline else inline.</p>
+
+<p>When the data is stored in this table for a clob value say &quot;Hello&quot; , the segment information for the &quot;Demo table&quot; and &quot;Demo table LOB segment&quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.</p>
+
+<p>But when we store a data with total character &gt; 2000 and &lt; 3000 , then the LOB data is going to the LOB segment even though total character are less than 3000.</p>
+
+<p>Now we couldn&#39;t understand Why the data smaller than 3000 characters is going to the LOB Segment ? . Is that each character takes 2 bytes , which justifies that data till 1500 is going to the data instead of Log Segment because of this Lots of disk space is getting wasted because of the LOB Table , since the CHUNK size is 8kb and the data per block will always be around 3 - 4K character and in some cases exceeding that. So essential for each row 4Kb space is wasted and in our case of 20 mn rows , it was running in 50&#39;s of GBs. Queries that you can use to see the disk usage per segment and per lob</p>
+
+<p><code>select segment_name,blocks from dba_segments where owner = &#39;SchemaName&#39; order by blocks desc; select * from all_lobs where owner = &#39;SchemaName&#39;</code></p>
+
+<p><strong>Solution</strong> Solution is use compress the LOB data using High Compression.Initially we were skeptical with this setting because this may have big impact on the performance but of time required to compress/uncompress data during CRUD operations but surprisingly it did not acted that way.</p>
+
+<p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;</code></p>
+
+<p><strong>After the above changes to the required table the space usage went drastically down and the total time degradation was negligible.</strong></p>
+
+<p><strong>Others</strong> <strong>Using Composite indexes</strong> As explained in the <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/" title="previous blog">previous blog</a> also, Use composite CLUSTERED/NON CLUSTERED index in you application to fasten the read operations.</p>
+
+<p><strong>Dynamic Sampling</strong> Set dynamic sampling in Oracle by default to level 4. This setting helps Oracle to pick the best possible plan when no statistics are present for the tables. Oracle will try to pick 64 blocks of records and extrapolate it to choose the right plan. This setting should be set by default and would help mainly for initial first run when no stats are present. <code>ALTER SYSTEM SET OPTIMIZER_DYNAMIC_SAMPLING = 4</code></p>
+
+<p><strong>Tools Used During Debugging</strong> We used oracle Enterprise Manager for quite useful information. Please see some of the screen shots below.</p>
+
+<p>To Check the explain plain of slow running queries go to <strong>Home --&gt; Performance --&gt; Top Activity --&gt; Select Query --&gt; Plan --&gt; Select Table Radio Option</strong> <img src="http://xebee.xebia.in/wp-content/uploads/2014/07/wrw.jpg" alt="wrw"></p>
+
+<p>To check the size of current datafiles go to <strong>Home --&gt; Server -&gt; DataFiles</strong> <img src="http://xebee.xebia.in/wp-content/uploads/2014/07/Untitled.jpg" alt="Untitled"></p>
+
+<p>To Check the current running queries go to <strong>Home --&gt; Performance --&gt; SQL Monitoring</strong> <img src="http://xebee.xebia.in/wp-content/uploads/2014/07/Untitled2.jpg" alt="Untitled2"></p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Oracle+Performance+Tuning+For+Product+Support&amp;url=http://myblog.***.***/2014/07/06/oracle-performance-tuning-for-product-support"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter fa-4x"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Pratik Garg</h4>
+              <p>
+               <div style="padding-left:100px;align:right">
+    
+                
+                  
+                      <a class="icon-twitter" href="https://twitter.com/pratikgarg">
+                        <i class="fa fa-twitter fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-github" href="https://github.com/pratikgarg">
+                        <i class="fa fa-github fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-linkedin" href="https://in.linkedin.com/in/pratikgarg">
+                        <i class="fa fa-linkedin fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+      
+             </div>
+              </p>
+             
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2014-07-06 00:00">06 Jul 2014</time></p>
+            </section>
+
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Pratik Garg</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/background_image.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Technology &nbsp; &nbsp;  Opinions &nbsp; &nbsp;  Experience</h1>
+        <h2 class="blog-description"></h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    $window.on('scroll', function() {
+      var top = $window.scrollTop();
+
+      if (top < 0 || top > 1500) { return; }
+      $image
+        .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+        .css('opacity', 1-Math.max(top/700, 0));
+    });
+    $window.trigger('scroll');
+
+    var height = $('.article-image').height();
+    $('.post-content').css('padding-top', height + 'px');
+
+    $('a[href*=#]:not([href=#])').click(function() {
+      if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+       && location.hostname == this.hostname) {
+        var target = $(this.hash);
+        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+        if (target.length) {
+          $('html,body').animate({ scrollTop: target.offset().top }, 500);
+          return false;
+        }
+      }
+    });
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

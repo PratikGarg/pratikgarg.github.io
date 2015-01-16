@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Liferay Service Builder Finders</title>
+  <meta name="description" content="" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://myblog.***.***/2012/06/17/liferay-service-builder-finders.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/assets/article_images/2014-07-06-oracle/desktop.jpg)">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">Liferay Service Builder Finders</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Pratik Garg</h4>
+              on
+              <time datetime="2012-06-17 00:00">17 Jun 2012</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+           <!-- <span class="post-reading-time"></span> read-->
+          </div>
+          <a name="topofpage"></a>
+          <h1>Liferay Service Builder Finders</h1>
+
+<p>In the last post we saw how Liferay service builder helps in generation of Services and Dao/Persistence classes which perform the basic CRUD operations. Along with the basic crud operation liferay also comes with some finder module methods using which can be used to find entities based upon one or more of the fields present in it. Let’s continue with the example of email entity to better insights on finders.</p>
+
+<p>*<em>Email Example Extended *</em></p>
+
+<p>Suppose we want to search for emails based upon the following two criteria&#39;s </p>
+
+<ol>
+<li>Subject matching to a particular text string</li>
+<li>Email from a particular user
+Add the following xml inside the email entry declared in service.xml</li>
+</ol>
+
+<p>[sourcecode language=&quot;xml&quot;] &lt;!-- Finders --&gt; <finder return-type="Collection" name="Subject"> <finder-column name="subject"></finder-column> </finder> <finder return-type="Collection" name="From"> <finder-column name="from"></finder-column> </finder> [/sourcecode]</p>
+
+<p>For the above declaration, we will see the following method in EmailPersistence and their implementation in EmailPersistenceImpl</p>
+
+<p>[sourcecode language=&quot;xml&quot;] public java.util.List<com.xebia.model.email> findBySubject( java.lang.String subject) throws com.liferay.portal.kernel.exception.SystemException;</p>
+
+<p>public java.util.List<com.xebia.model.email> findByFrom( java.lang.String from) throws com.liferay.portal.kernel.exception.SystemException; [/sourcecode]</p>
+
+<p>There are some additional helper methods generated for accessing data corresponding to these fields. These methods can be used to find count or limit the number of results etc.</p>
+
+<p>Now an additional requirement is, to find all emails that are received on a particular date i.e. within those 24 hours. The first thing that will come to mind is the &quot;Where&quot; clause. But there is no out of the box facility available in liferay that will automatically generate this method. The only only solution for these type of cases is writing a custom sql query and using the finder functionality to execute this query and return the results.</p>
+
+<hr>
+
+<p><strong>Configuration</strong></p>
+
+<p>Lets first start with writing of the custom query which will help us in retrieving all the emails between two dates. Our query will look like this</p>
+
+<p>[sourcecode language=&quot;xml&quot;] SELECT Email.* FROM Email WHERE Email.date between ? AND ? [/sourcecode]</p>
+
+<p>Include this sql in /docroot/WEB-INF/src/custom-sql/default.xml file. So that default.xml sql will look something like this</p>
+
+<p>Note : Portlet structure should adhere to liferay standards and we have to create a custom-sql folder inside src and then create a file default.xml</p>
+
+<p>We can also create custom file and then mention the reference of that file in default.xml.</p>
+
+<p>[sourcecode language=&quot;xml&quot;] &lt;!--?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?--&gt; <custom-sql> <sql id="com.xebia.service.persistence.EmailFinder.getEmailBetweenDates"> &lt;![CDATA[ SELECT Email.* FROM Email WHERE Email.date between ? AND ? ]]&gt; </sql> </custom-sql> [/sourcecode]</p>
+
+<p>the id attribute is the unique identifier through which this query is recognized.</p>
+
+<p><strong>Code Generation</strong></p>
+
+<p>We will be calling this query from finder class of liferay. Following are the steps for code generation for Liferay finder classes</p>
+
+<p>Create a class EmailFinderImpl in the persistence package and Extend this class from EmailPersistenceImpl</p>
+
+<p>Run ant build-service. This will generate the EmailFinder interface and EmailFinderUtil</p>
+
+<p>Now go to EmailFinderImpl and make it implement EmailFinder</p>
+
+<p>After this add a method in EmailFinderImpl and will run service builder, the same method will be reflected in EmailFinder interface and EmailFinderUtil class as well.</p>
+
+<p>The class hierarchy and structure of Finder is almost similar to the structure of services which were shown in the last blog. Following is the class diagram for Finder.</p>
+
+<p><img src="http://xebee.xebia.in/wp-content/uploads/2012/05/finder_class_diag.png" alt="" title="finder_class_diag"></p>
+
+<p>[sourcecode language=&quot;xml&quot;] public static String GET<em>EMAIL</em>BETWEEN_DATES = EmailFinder.class .getName() + &quot;.getEmailBetweenDates&quot;;</p>
+<div class="highlight"><pre><code class="language-text" data-lang="text">public List&amp;lt;email&amp;gt; getEmailBetweenDates(Date startDate,Date endDate) throws ParseException, SystemException {
+
+    Session session = null;
+    List&amp;lt;email&amp;gt; emails = null;
+    try {
+        session = openSession();
+
+        String sql = CustomSQLUtil.get(GET_EMAIL_BETWEEN_DATES);
+        SQLQuery q = session.createSQLQuery(sql);
+
+        q.addEntity(&amp;quot;Email&amp;quot;, EmailImpl.class);
+        QueryPos qPos = QueryPos.getInstance(q);
+
+        qPos.add(startDate);
+        qPos.add(endDate);
+
+        emails = (List&amp;lt;email&amp;gt;) q.list();
+        if (emails == null) {
+            emails = Collections.emptyList();
+                                 }
+           } finally {
+        closeSession(session);
+     }
+
+    return emails;
+}
+</code></pre></div>
+<p>[/sourcecode]</p>
+
+<p><strong>Code Utilization</strong></p>
+
+<p>Calling of the finder methods is almost same as calling any of the service methods.</p>
+
+<p>[sourcecode language=&quot;xml&quot;] List<email> emailsByDate = EmailFinderUtil.getEmailBetweenDates(Date startDate, Date endDate); [/sourcecode]</p>
+
+<p><strong>Object Mappings</strong></p>
+
+<p>So far we have seen how to perform cruds and advanced search on a entity. Now let’s consider this example.</p>
+
+<p>Fetch all the emails that have an attachments.</p>
+
+<p>At Database Level : we will have an Email table and an Attachment table with email Id as the foreign key to support one-to-many relationships.</p>
+
+<p>At Object level : we will have an Email object with Collection of type attachment as one of properties.</p>
+
+<p>When we retrieve the email we also expect the attachement to get populated and vice-versa during the save (Given that we have done the required relationship mappings between the entities in service.xml).</p>
+
+<p>But this is not how it works in the liferay. We cannot create a relation between the entities using the service.xml which basically means no work will be done automatically either at the DB level (foreign keys) and at object level (has a relationship) , yes there are workarounds but out of the box this is not provided. In the liferay <a href="http://www.liferay.com/dtd/liferay-service-builder_5_2_0.dtd%20">DTD</a> for service.xml , there is section that will describe how to create one-2-one / many-2-many relationships but even if we follow that convention , service builder will not create the mappings in generated java classes. This is how the attachment entity will look like.</p>
+
+<p>[sourcecode language=&quot;xml&quot;] <entity name="Attachment" local-service="true" remote-service="false" table="Email"> <column name="id" type="long" primary="true"> <column name="type" type="String"> <column name="emailId" type="long"> <column name="content" type="String"> &lt;!-- Finders --&gt; <finder name="id"> <finder-column name="to"></finder-column> </finder> <finder name="emailId" return-type="Collection"> <finder-column name="from"></finder-column> </finder> </column></column></column></column></entity> [/sourcecode]</p>
+
+<p>To achieve the above scenario : 1) Create an EmailDTO to contain email and its corresponding Attachment. Code below</p>
+
+<p>[sourcecode language=&quot;xml&quot;]</p>
+
+<p>public EmailDTO{ private Email; private Attachment;</p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Liferay+Service+Builder+Finders&amp;url=http://myblog.***.***/2012/06/17/liferay-service-builder-finders"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter fa-4x"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Pratik Garg</h4>
+              <p>
+               <div style="padding-left:100px;align:right">
+    
+                
+                  
+                      <a class="icon-twitter" href="https://twitter.com/pratikgarg">
+                        <i class="fa fa-twitter fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-github" href="https://github.com/pratikgarg">
+                        <i class="fa fa-github fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-linkedin" href="https://in.linkedin.com/in/pratikgarg">
+                        <i class="fa fa-linkedin fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+      
+             </div>
+              </p>
+             
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2012-06-17 00:00">17 Jun 2012</time></p>
+            </section>
+
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Pratik Garg</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/background_image.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Technology &nbsp; &nbsp;  Opinions &nbsp; &nbsp;  Experience</h1>
+        <h2 class="blog-description"></h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    $window.on('scroll', function() {
+      var top = $window.scrollTop();
+
+      if (top < 0 || top > 1500) { return; }
+      $image
+        .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+        .css('opacity', 1-Math.max(top/700, 0));
+    });
+    $window.trigger('scroll');
+
+    var height = $('.article-image').height();
+    $('.post-content').css('padding-top', height + 'px');
+
+    $('a[href*=#]:not([href=#])').click(function() {
+      if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+       && location.hostname == this.hostname) {
+        var target = $(this.hash);
+        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+        if (target.length) {
+          $('html,body').animate({ scrollTop: target.offset().top }, 500);
+          return false;
+        }
+      }
+    });
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>
