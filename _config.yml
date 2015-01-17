@@ -3,7 +3,7 @@ markdown: redcarpet
 highlighter: pygments
 
 # Site settings
-title: "Technology &nbsp; &nbsp;  Opinions &nbsp; &nbsp;  Experience"
+title: "Technology &nbsp; &nbsp;  Opinion &nbsp; &nbsp;  Experience"
 description: > # this means to ignore newlines until "email:"
    
 
