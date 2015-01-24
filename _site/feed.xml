@@ -5,8 +5,8 @@
     <description></description>
     <link>http://pratikgarg.com/</link>
     <atom:link href="http://pratikgarg.com/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 24 Jan 2015 11:52:04 +0530</pubDate>
-    <lastBuildDate>Sat, 24 Jan 2015 11:52:04 +0530</lastBuildDate>
+    <pubDate>Sat, 24 Jan 2015 12:00:08 +0530</pubDate>
+    <lastBuildDate>Sat, 24 Jan 2015 12:00:08 +0530</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
     
       <item>
@@ -80,25 +80,25 @@ The crime data has been taken from &lt;a href=&quot;http://www.data.gov.in/keywo
         <title>Oracle Performance Tuning For Product Support</title>
         <description>&lt;h1&gt;Oracle Performance Tuning for Product Support&lt;/h1&gt;
 
-&lt;p&gt;In the last post &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot;&gt;SQL Server Performance Tuning for Product Support&lt;/a&gt; we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.&lt;/p&gt;
+&lt;p&gt;In the last post &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot;&gt;SQL Server Performance Tuning for Product Support&lt;/a&gt; we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Performance Tuning&lt;/strong&gt; Compared to the SQL Server database we did not had much issues with Oracle database.&lt;/p&gt;
 
-&lt;p&gt;&lt;strong&gt;Problem&lt;/strong&gt; As described in the &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot; title=&quot;previous blog&quot;&gt;previous blog&lt;/a&gt; about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information &lt;a href=&quot;http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm&quot; title=&quot;More about Table stats and Optimizer&quot;&gt;(More about Table stats and Optimizer)&lt;/a&gt; present with the database for tables become sort of invalid.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Problem&lt;/strong&gt; As described in the &lt;a href=&quot;http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/&quot; title=&quot;previous blog&quot;&gt;previous blog&lt;/a&gt; about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information &lt;a href=&quot;http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm&quot; title=&quot;More about Table stats and Optimizer&quot;&gt;(More about Table stats and Optimizer)&lt;/a&gt; present with the database for tables become sort of invalid.&lt;/p&gt;
 
-&lt;p&gt;Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.&lt;/p&gt;
+&lt;p&gt;Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.&lt;/p&gt;
 
 &lt;p&gt;Even if the AUTO GENERATE stats are set to true the auto generated stats may not reflect the correct state. So you will need some mechanism to update stats either using a scheduled job or something else.  &lt;strong&gt;Solution&lt;/strong&gt; In our case each steps updates a LOG TABLE whenever it starts and ends. So we created an AFTER INSERT TRIGGER on that table as given below. This trigger update the statistics of the database whenever a phase starts so the the query optimizer makes the appropriate adjustments based on current state of data.&lt;/p&gt;
 
 &lt;p&gt;&lt;code&gt;CREATE TRIGGER TRIGGERNAME AFTER INSERT ON LOGTABLE REFERENCING NEW AS N FOR EACH ROW BEGIN run_stats(&amp;#39;TABLENAME&amp;#39;); END;&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &amp;#39;select table_name from user_tables&amp;#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &amp;#39; where table_name = upper( &amp;#39;&amp;#39;&amp;#39; || p_table_name || &amp;#39;&amp;#39;&amp;#39;) &amp;#39; ; END IF; select sys_context( &amp;#39;USERENV&amp;#39;, &amp;#39;CURRENT_USER&amp;#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&amp;gt;true, method_opt=&amp;gt;&amp;#39;for all columns, size 1&amp;#39; ); end loop; close cv; end run_stats;&lt;/code&gt; &lt;strong&gt;Space Tuning&lt;/strong&gt; &lt;strong&gt;Problem&lt;/strong&gt; Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &amp;#39;select table_name from user_tables&amp;#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &amp;#39; where table_name = upper( &amp;#39;&amp;#39;&amp;#39; || p_table_name || &amp;#39;&amp;#39;&amp;#39;) &amp;#39; ; END IF; select sys_context( &amp;#39;USERENV&amp;#39;, &amp;#39;CURRENT_USER&amp;#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&amp;gt;true, method_opt=&amp;gt;&amp;#39;for all columns, size 1&amp;#39; ); end loop; close cv; end run_stats;&lt;/code&gt; &lt;strong&gt;Space Tuning&lt;/strong&gt; &lt;strong&gt;Problem&lt;/strong&gt; Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.&lt;/p&gt;
 
 &lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB )&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) Stored AS (STORAGE IN ROW ENABLED)&lt;/code&gt; As per the oracle documentation when the CLOB is greater the 4000 bytes it will be stored outline else inline.&lt;/p&gt;
 
-&lt;p&gt;When the data is stored in this table for a clob value say &amp;quot;Hello&amp;quot; , the segment information for the &amp;quot;Demo table&amp;quot; and &amp;quot;Demo table LOB segment&amp;quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.&lt;/p&gt;
+&lt;p&gt;When the data is stored in this table for a clob value say &amp;quot;Hello&amp;quot; , the segment information for the &amp;quot;Demo table&amp;quot; and &amp;quot;Demo table LOB segment&amp;quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.&lt;/p&gt;
 
 &lt;p&gt;But when we store a data with total character &amp;gt; 2000 and &amp;lt; 3000 , then the LOB data is going to the LOB segment even though total character are less than 3000.&lt;/p&gt;
 
@@ -108,7 +108,7 @@ The crime data has been taken from &lt;a href=&quot;http://www.data.gov.in/keywo
 
 &lt;p&gt;&lt;strong&gt;Solution&lt;/strong&gt; Solution is use compress the LOB data using High Compression.Initially we were skeptical with this setting because this may have big impact on the performance but of time required to compress/uncompress data during CRUD operations but surprisingly it did not acted that way.&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;After the above changes to the required table the space usage went drastically down and the total time degradation was negligible.&lt;/strong&gt;&lt;/p&gt;
 

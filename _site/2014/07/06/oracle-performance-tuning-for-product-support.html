@@ -74,25 +74,25 @@
           <a name="topofpage"></a>
           <h1>Oracle Performance Tuning for Product Support</h1>
 
-<p>In the last post <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/">SQL Server Performance Tuning for Product Support</a> we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.</p>
+<p>In the last post <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/">SQL Server Performance Tuning for Product Support</a> we discussed about SQL Server tuning. In this blog I will cover Oracle (11g) database support in terms of performance and space.</p>
 
 <p><strong>Performance Tuning</strong> Compared to the SQL Server database we did not had much issues with Oracle database.</p>
 
-<p><strong>Problem</strong> As described in the <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/" title="previous blog">previous blog</a> about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information <a href="http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm" title="More about Table stats and Optimizer">(More about Table stats and Optimizer)</a> present with the database for tables become sort of invalid.</p>
+<p><strong>Problem</strong> As described in the <a href="http://xebee.xebia.in/index.php/2014/07/03/sql-server-performance-tuning-for-product-support/" title="previous blog">previous blog</a> about the application, its a sequence of steps. Where each step does some processing over the data stored in the database. Now some of these phases update certain table from empty to couple of million rows in little time. As a result of which the statistics information <a href="http://www.dba-oracle.com/concepts/tables_optimizer_statistics.htm" title="More about Table stats and Optimizer">(More about Table stats and Optimizer)</a> present with the database for tables become sort of invalid.</p>
 
-<p>Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.</p>
+<p>Now those tables which were empty and suddenly they have million of rows participate in queries as a join with other tables,  Indexes of those tables may or may not be used and the database may prefers to use full table scan because of earlier generated optimization plans when the table had little or no rows.</p>
 
 <p>Even if the AUTO GENERATE stats are set to true the auto generated stats may not reflect the correct state. So you will need some mechanism to update stats either using a scheduled job or something else.  <strong>Solution</strong> In our case each steps updates a LOG TABLE whenever it starts and ends. So we created an AFTER INSERT TRIGGER on that table as given below. This trigger update the statistics of the database whenever a phase starts so the the query optimizer makes the appropriate adjustments based on current state of data.</p>
 
 <p><code>CREATE TRIGGER TRIGGERNAME AFTER INSERT ON LOGTABLE REFERENCING NEW AS N FOR EACH ROW BEGIN run_stats(&#39;TABLENAME&#39;); END;</code></p>
 
-<p><code>CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &#39;select table_name from user_tables&#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &#39; where table_name = upper( &#39;&#39;&#39; || p_table_name || &#39;&#39;&#39;) &#39; ; END IF; select sys_context( &#39;USERENV&#39;, &#39;CURRENT_USER&#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&gt;true, method_opt=&gt;&#39;for all columns, size 1&#39; ); end loop; close cv; end run_stats;</code> <strong>Space Tuning</strong> <strong>Problem</strong> Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.</p>
+<p><code>CREATE OR REPLACE PROCEDURE run_stats( p_table_name in varchar2 default null ) IS PRAGMA AUTONOMOUS_TRANSACTION; cv sys_refcursor; -- cursor variable v_table varchar2(30); v_owner varchar2(30); v_sql varchar2(2014) := &#39;select table_name from user_tables&#39;; BEGIN IF( p_table_name is not null ) THEN v_sql := v_sql || &#39; where table_name = upper( &#39;&#39;&#39; || p_table_name || &#39;&#39;&#39;) &#39; ; END IF; select sys_context( &#39;USERENV&#39;, &#39;CURRENT_USER&#39; ) into v_owner from dual; open cv for v_sql; loop fetch cv into v_table; exit when cv%notfound; dbms_stats.gather_table_stats( v_owner, v_table, cascade=&gt;true, method_opt=&gt;&#39;for all columns, size 1&#39; ); end loop; close cv; end run_stats;</code> <strong>Space Tuning</strong> <strong>Problem</strong> Our application was taking double the amount of space on Oracle as compared to other databases (DB2/SQLServer) for the same amount of data processed. Application has tables that have couple of regular fields and a CLOB datatype. Below is a sample table we have in application. Table can be  created it with two ways, each of which should give the same behavior.</p>
 
 <p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB )</code></p>
 
 <p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) Stored AS (STORAGE IN ROW ENABLED)</code> As per the oracle documentation when the CLOB is greater the 4000 bytes it will be stored outline else inline.</p>
 
-<p>When the data is stored in this table for a clob value say &quot;Hello&quot; , the segment information for the &quot;Demo table&quot; and &quot;Demo table LOB segment&quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.</p>
+<p>When the data is stored in this table for a clob value say &quot;Hello&quot; , the segment information for the &quot;Demo table&quot; and &quot;Demo table LOB segment&quot;, shows that all the data is going to table and no new blocks are being consumed in the Lob Segment. When bigger is stored with total character less than 1500, then also the same behavior as above.</p>
 
 <p>But when we store a data with total character &gt; 2000 and &lt; 3000 , then the LOB data is going to the LOB segment even though total character are less than 3000.</p>
 
@@ -102,7 +102,7 @@
 
 <p><strong>Solution</strong> Solution is use compress the LOB data using High Compression.Initially we were skeptical with this setting because this may have big impact on the performance but of time required to compress/uncompress data during CRUD operations but surprisingly it did not acted that way.</p>
 
-<p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;</code></p>
+<p><code>CREATE TABLE DEMO( a number (10, 2), data CLOB ) LOB (data) STORE AS SECUREFILE ( COMPRESS HIGH TABLESPACE USERS -- SHOULD BE SEPARATE TABLESPACE IF POSSIBLE ENABLE STORAGE IN ROW CHUNK 8192 RETENTION NOCACHE ) PCTFREE 0 NOLOGGING ;</code></p>
 
 <p><strong>After the above changes to the required table the space usage went drastically down and the total time degradation was negligible.</strong></p>
 
@@ -190,11 +190,6 @@ var disqus_shortname = 'pratikgargblog'; // required: replace example with your 
             
               
             
-              
-                <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&url=Oracle+Performance+Tuning+For+Product+Supporthttp://pratikgarg.com/2014/07/06/oracle-performance-tuning-for-product-support"
-                  onclick="window.open(this.href, 'linkedin-share', 'width=550,height=255');return false;">
-                <i class="fa fa-linkedin fa-3x"></i><span class="hidden">linkedin</span>
-                </a>
               
             
           </section>
