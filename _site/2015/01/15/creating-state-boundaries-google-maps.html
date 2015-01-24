@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Creating State Boundaries Google Maps</title>
+  <meta name="description" content="" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-4074900-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<!--<a href="http://pratikgarg.com" ><span class="logo-readium" style="background-image: url(/assets/images/logo.png)"></span></a>-->
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/assets/article_images/2014-07-06-oracle/desktop.jpg)">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">Creating State Boundaries Google Maps</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Pratik Garg</h4>
+              on
+              <time datetime="2015-01-15 00:00">15 Jan 2015</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+           <!-- <span class="post-reading-time"></span> read-->
+          </div>
+          <a name="topofpage"></a>
+          <h1>Creating state boundaries on google maps.</h1>
+
+<p>Google maps api provides feature to draw polygon on the map for a given sets of polygon points <a href="https://developers.google.com/maps/documentation/javascript/examples/polygon-simple">developer google maps for more info</a>. A polygon point is a geographical point represented by latitude and longitude. This feature can be leveraged to draw the state boundaries by drawing polygon in such a fashion that it consists of polygon points which are nothing but set of lat/lon coordinates representing that state boundary.</p>
+
+<p>Taking specific case for a particular Indian state, If we search for Delhi in google maps then delhi state boundary is highlighted in light red color. If we want something similar in application highlighting an area or maybe completely fill the area inside that boundary, we can&#39;t do it by using some out of the box feature provided by google maps (Maybe in future).</p>
+
+<p>To draw the polygon first we need the polygon points that make up the boundary of delhi, Now the problem is from where to get this set of coordinates.</p>
+
+<p>There are few website that provide this data for some cost but there are free options   also.</p>
+
+<ul>
+<li>One option is get this data from <a href="http://www.openstreetmap.org/">Open Street Maps</a>. Search for delhi and inspect the network calls in the browser. One of call is going to return the polygon point in xml format. Convert this data in appropriate format to be consumable by google maps using a script/program.</li>
+</ul>
+
+<p>The problem with this data is that the polygon points retured as a reponse are not in a sequential order to draw the polygon in clockwise or anticlock wise starting from a particular point, Which causes google maps api to draw some wierd diagram. There is a small program to fix it in the github repo link provided below.</p>
+
+<ul>
+<li><p>Second option is to utilize the <a href="http://wikimapia.org/api">Rest Services</a> provided by wikimapia to get these coordinates. The useful service is #placegetbyid. This service requires an area id (in our case id of the state). </p></li>
+<li><p>Most easy option is to use data provided by this <a href="http://www.dyngeometry.com/web/WorldRegion.aspx">DynoGeometry</a>  We can copy this data and then do some cleanup/formatting so that its consumable by google maps. This is how it should look like finally (Only a snippet).</p></li>
+</ul>
+<div class="highlight"><pre><code class="language-text" data-lang="text">[{&quot;lon&quot;:77.58635,&quot;lat&quot;:18.27177}, {&quot;lon&quot;:77.57572,&quot;lat&quot;:18.22574}, {&quot;lon&quot;:77.57125,&quot;lat&quot;:18.16786}, {&quot;lon&quot;:77.61761,&quot;lat&quot;:18.0048}, {&quot;lon&quot;:77.66366,&quot;lat&quot;:17.97081}, {&quot;lon&quot;:77.6026,&quot;lat&quot;:17.86826}, {&quot;lon&quot;:77.50312,&quot;lat&quot;:17.80861}, {&quot;lon&quot;:77.47424,&quot;lat&quot;:17.7017}, {&quot;lon&quot;:77.46527,&quot;lat&quot;:17.60376}, {&quot;lon&quot;:77.57575,&quot;lat&quot;:17.5477}, {&quot;lon&quot;:77.66482,&quot;lat&quot;:17.47081}, {&quot;lon&quot;:77.60968,&quot;lat&quot;:17.45284}, {&quot;lon&quot;:77.55151,&quot;lat&quot;:17.42597}, {&quot;lon&quot;:77.47812,&quot;lat&quot;:17.3486}, {&quot;lon&quot;:77.43534,&quot;lat&quot;:17.29506}, {&quot;lon&quot;:77.38955,&quot;lat&quot;:17.20887}, {&quot;lon&quot;:77.38976,&quot;lat&quot;:17.11836}, {&quot;lon&quot;:77.42966,&quot;lat&quot;:17.09326}, {&quot;lon&quot;:77.45603,&quot;lat&quot;:16.95684}, {&quot;lon&quot;:77.44851,&quot;lat&quot;:16.89747}, {&quot;lon&quot;:77.45475,&quot;lat&quot;:16.84704}, {&quot;lon&quot;:77.47634,&quot;lat&quot;:16.7937}]
+</code></pre></div>
+<p>So once we have the coordinate, we can package them as we like. One way is to keep them in individual .txt file. Now provide this data to the maps to plot it. This code is fetching data for server for a list of states, creating a polygon and adding it on the map. </p>
+<div class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">states</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delhi&quot;</span><span class="p">};</span>
+
+<span class="k">for</span> <span class="p">(</span> <span class="kd">var</span> <span class="nx">state</span> <span class="k">in</span> <span class="nx">states</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">coords</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+            <span class="nx">url</span> <span class="o">:</span> <span class="s2">&quot;Data/states/&quot;</span> <span class="o">+</span> <span class="nx">state</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">(),</span> 
+            <span class="nx">success</span> <span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">$</span><span class="p">.</span><span class="nx">each</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">coords</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="k">new</span> <span class="nx">google</span><span class="p">.</span><span class="nx">maps</span><span class="p">.</span><span class="nx">LatLng</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">lat</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">lon</span><span class="p">));</span>
+                <span class="p">});</span>
+            <span class="p">},</span>
+            <span class="nx">async</span> <span class="o">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="nx">type</span> <span class="o">:</span> <span class="s2">&quot;GET&quot;</span><span class="p">,</span>
+            <span class="nx">dataType</span> <span class="o">:</span> <span class="s1">&#39;json&#39;</span>
+        <span class="p">});</span>
+
+        <span class="nx">polygon</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">google</span><span class="p">.</span><span class="nx">maps</span><span class="p">.</span><span class="nx">Polygon</span><span class="p">({</span>
+            <span class="nx">paths</span> <span class="o">:</span> <span class="nx">coords</span><span class="p">,</span>
+            <span class="nx">strokeColor</span> <span class="o">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+            <span class="nx">strokeOpacity</span> <span class="o">:</span> <span class="mf">1.5</span><span class="p">,</span>
+            <span class="nx">strokeWeight</span> <span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="nx">fillOpacity</span> <span class="o">:</span> <span class="mf">1.0</span>
+        <span class="p">});</span>
+
+        <span class="nx">polygon</span><span class="p">.</span><span class="nx">setMap</span><span class="p">(</span><span class="nx">map</span><span class="p">);</span>
+
+    <span class="p">}</span>
+</code></pre></div>
+<p>A sample application is created to plot crime agaist women from 2001-2012 in India. The boundaries on india states have been created using above mentioned approach.
+The crime data has been taken from <a href="http://www.data.gov.in/keywords/crime-against-women">gov.data.in</a>. Here is a visual from the application.</p>
+
+<p><img src="/assets/article_images/boundaries.png" alt="India State Boundaries"></p>
+
+<p>The complete code can be found at the <a href="https://github.com/PratikGarg/visuals-crime-india">Github repository</a>. This repo also contains the coordinates for <a href="https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data">All indian states</a>. </p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Creating+State+Boundaries+Google+Maps&amp;url=http://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter fa-4x"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+                <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&url=Creating+State+Boundaries+Google+Mapshttp://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps"
+                  onclick="window.open(this.href, 'linkedin-share', 'width=550,height=255');return false;">
+                <i class="fa fa-linkedin fa-4x"></i><span class="hidden">linkedin</span>
+                </a>
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/author.jpg)">Blog Logo</div>
+              <h4>Pratik Garg</h4>
+              <p>
+               <div style="padding-left:100px;align:right">
+    
+                
+                  
+                      <a class="icon-twitter" href="https://twitter.com/pratikgarg">
+                        <i class="fa fa-twitter fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-github" href="https://github.com/pratikgarg">
+                        <i class="fa fa-github fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+                  
+                      <a class="icon-linkedin" href="https://in.linkedin.com/in/pratikgarg">
+                        <i class="fa fa-linkedin fa-1x"></i>
+                      </a>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;
+                  
+                
+      
+             </div>
+              </p>
+             
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2015-01-15 00:00">15 Jan 2015</time></p>
+            </section>
+
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Pratik Garg</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/background_image.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Technology &nbsp; &nbsp;  Opinion &nbsp; &nbsp;  Experience</h1>
+        <h2 class="blog-description"></h2>
+        <a href="/" class="btn">Back to Home</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    $window.on('scroll', function() {
+      var top = $window.scrollTop();
+
+      if (top < 0 || top > 1500) { return; }
+      $image
+        .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+        .css('opacity', 1-Math.max(top/700, 0));
+    });
+    $window.trigger('scroll');
+
+    var height = $('.article-image').height();
+    $('.post-content').css('padding-top', height + 'px');
+
+    $('a[href*=#]:not([href=#])').click(function() {
+      if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+       && location.hostname == this.hostname) {
+        var target = $(this.hash);
+        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+        if (target.length) {
+          $('html,body').animate({ scrollTop: target.offset().top }, 500);
+          return false;
+        }
+      }
+    });
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

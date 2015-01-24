@@ -1,13 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Technology &amp;nbsp; &amp;nbsp;  Opinions &amp;nbsp; &amp;nbsp;  Experience</title>
+    <title>Technology &amp;nbsp; &amp;nbsp;  Opinion &amp;nbsp; &amp;nbsp;  Experience</title>
     <description></description>
     <link>http://pratikgarg.com/</link>
     <atom:link href="http://pratikgarg.com/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 17 Jan 2015 14:13:04 +0530</pubDate>
-    <lastBuildDate>Sat, 17 Jan 2015 14:13:04 +0530</lastBuildDate>
+    <pubDate>Sat, 24 Jan 2015 11:10:42 +0530</pubDate>
+    <lastBuildDate>Sat, 24 Jan 2015 11:10:42 +0530</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
+    
+      <item>
+        <title>Creating State Boundaries Google Maps</title>
+        <description>&lt;h1&gt;Creating state boundaries on google maps.&lt;/h1&gt;
+
+&lt;p&gt;Google maps api provides feature to draw polygon on the map for a given sets of polygon points &lt;a href=&quot;https://developers.google.com/maps/documentation/javascript/examples/polygon-simple&quot;&gt;developer google maps for more info&lt;/a&gt;. A polygon point is a geographical point represented by latitude and longitude. This feature can be leveraged to draw the state boundaries by drawing polygon in such a fashion that it consists of polygon points which are nothing but set of lat/lon coordinates representing that state boundary.&lt;/p&gt;
+
+&lt;p&gt;Taking specific case for a particular Indian state, If we search for Delhi in google maps then delhi state boundary is highlighted in light red color. If we want something similar in application highlighting an area or maybe completely fill the area inside that boundary, we can&amp;#39;t do it by using some out of the box feature provided by google maps (Maybe in future).&lt;/p&gt;
+
+&lt;p&gt;To draw the polygon first we need the polygon points that make up the boundary of delhi, Now the problem is from where to get this set of coordinates.&lt;/p&gt;
+
+&lt;p&gt;There are few website that provide this data for some cost but there are free options   also.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;One option is get this data from &lt;a href=&quot;http://www.openstreetmap.org/&quot;&gt;Open Street Maps&lt;/a&gt;. Search for delhi and inspect the network calls in the browser. One of call is going to return the polygon point in xml format. Convert this data in appropriate format to be consumable by google maps using a script/program.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The problem with this data is that the polygon points retured as a reponse are not in a sequential order to draw the polygon in clockwise or anticlock wise starting from a particular point, Which causes google maps api to draw some wierd diagram. There is a small program to fix it in the github repo link provided below.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Second option is to utilize the &lt;a href=&quot;http://wikimapia.org/api&quot;&gt;Rest Services&lt;/a&gt; provided by wikimapia to get these coordinates. The useful service is #placegetbyid. This service requires an area id (in our case id of the state). &lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Most easy option is to use data provided by this &lt;a href=&quot;http://www.dyngeometry.com/web/WorldRegion.aspx&quot;&gt;DynoGeometry&lt;/a&gt;  We can copy this data and then do some cleanup/formatting so that its consumable by google maps. This is how it should look like finally (Only a snippet).&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;[{&amp;quot;lon&amp;quot;:77.58635,&amp;quot;lat&amp;quot;:18.27177}, {&amp;quot;lon&amp;quot;:77.57572,&amp;quot;lat&amp;quot;:18.22574}, {&amp;quot;lon&amp;quot;:77.57125,&amp;quot;lat&amp;quot;:18.16786}, {&amp;quot;lon&amp;quot;:77.61761,&amp;quot;lat&amp;quot;:18.0048}, {&amp;quot;lon&amp;quot;:77.66366,&amp;quot;lat&amp;quot;:17.97081}, {&amp;quot;lon&amp;quot;:77.6026,&amp;quot;lat&amp;quot;:17.86826}, {&amp;quot;lon&amp;quot;:77.50312,&amp;quot;lat&amp;quot;:17.80861}, {&amp;quot;lon&amp;quot;:77.47424,&amp;quot;lat&amp;quot;:17.7017}, {&amp;quot;lon&amp;quot;:77.46527,&amp;quot;lat&amp;quot;:17.60376}, {&amp;quot;lon&amp;quot;:77.57575,&amp;quot;lat&amp;quot;:17.5477}, {&amp;quot;lon&amp;quot;:77.66482,&amp;quot;lat&amp;quot;:17.47081}, {&amp;quot;lon&amp;quot;:77.60968,&amp;quot;lat&amp;quot;:17.45284}, {&amp;quot;lon&amp;quot;:77.55151,&amp;quot;lat&amp;quot;:17.42597}, {&amp;quot;lon&amp;quot;:77.47812,&amp;quot;lat&amp;quot;:17.3486}, {&amp;quot;lon&amp;quot;:77.43534,&amp;quot;lat&amp;quot;:17.29506}, {&amp;quot;lon&amp;quot;:77.38955,&amp;quot;lat&amp;quot;:17.20887}, {&amp;quot;lon&amp;quot;:77.38976,&amp;quot;lat&amp;quot;:17.11836}, {&amp;quot;lon&amp;quot;:77.42966,&amp;quot;lat&amp;quot;:17.09326}, {&amp;quot;lon&amp;quot;:77.45603,&amp;quot;lat&amp;quot;:16.95684}, {&amp;quot;lon&amp;quot;:77.44851,&amp;quot;lat&amp;quot;:16.89747}, {&amp;quot;lon&amp;quot;:77.45475,&amp;quot;lat&amp;quot;:16.84704}, {&amp;quot;lon&amp;quot;:77.47634,&amp;quot;lat&amp;quot;:16.7937}]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;So once we have the coordinate, we can package them as we like. One way is to keep them in individual .txt file. Now provide this data to the maps to plot it. This code is fetching data for server for a list of states, creating a polygon and adding it on the map. &lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;states&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;delhi&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;state&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;states&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;coords&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[];&lt;/span&gt;
+        &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;ajax&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Data/states/&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;state&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;toLowerCase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; 
+            &lt;span class=&quot;nx&quot;&gt;success&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+                &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;each&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+                    &lt;span class=&quot;nx&quot;&gt;coords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;push&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;google&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;maps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;LatLng&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;lat&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;s&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;lon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+                &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;GET&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;dataType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;json&amp;#39;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+
+        &lt;span class=&quot;nx&quot;&gt;polygon&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;google&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;maps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Polygon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;paths&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;coords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;strokeColor&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;white&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;strokeOpacity&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;strokeWeight&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;nx&quot;&gt;fillOpacity&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+
+        &lt;span class=&quot;nx&quot;&gt;polygon&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;setMap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;A sample application is created to plot crime agaist women from 2001-2012 in India. The boundaries on india states have been created using above mentioned approach.
+The crime data has been taken from &lt;a href=&quot;http://www.data.gov.in/keywords/crime-against-women&quot;&gt;gov.data.in&lt;/a&gt;. Here is a visual from the application.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/article_images/boundaries.png&quot; alt=&quot;India State Boundaries&quot;&gt;&lt;/p&gt;
+
+&lt;p&gt;The complete code can be found at the &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india&quot;&gt;Github repository&lt;/a&gt;. This repo also contains the coordinates for &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data&quot;&gt;All indian states&lt;/a&gt;. &lt;/p&gt;
+</description>
+        <pubDate>Thu, 15 Jan 2015 00:00:00 +0530</pubDate>
+        <link>http://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps.html</link>
+        <guid isPermaLink="true">http://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps.html</guid>
+        
+        
+      </item>
     
       <item>
         <title>Oracle Performance Tuning For Product Support</title>
