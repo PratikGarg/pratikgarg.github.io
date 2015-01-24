@@ -196,7 +196,7 @@ body {
 
 .blog-header {
   width: 100%;
-  max-width: 90%;
+  max-width: 80%;
   margin: 0 auto;
   position: relative;
   padding: 0;
@@ -253,7 +253,7 @@ body {
 
 .content {
   width: 100%;
-  max-width: 90%;
+  max-width: 80%;
   margin: 0 auto;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -278,7 +278,8 @@ body {
         text-decoration: none;
         color: #333332; }
         .content article .post-title a:hover {
-          text-decoration: none; }
+          text-decoration: none;
+          color: #48649f; }
     .content article .post-excerpt {
       letter-spacing: -0.02em;
       font-weight: 300;
@@ -348,7 +349,7 @@ body {
   margin: 0 auto;
   padding: 48px 0;
   width: 100%;
-  max-width: 90%;
+  max-width: 80%;
   font-size: 12px;
   text-align: center;
   color: #999;
@@ -496,7 +497,7 @@ body {
   .post .post-content p {
     font-weight: 400;
     font-style: normal;
-    font-size: 22px;
+    font-size: 20px;
     line-height: 30px;
     margin: 0;
     padding-bottom: 30px;
@@ -672,7 +673,7 @@ body {
     width: 100%;
     position: relative;
     z-index: 99;
-    max-width: 90%;
+    max-width: 80%;
     padding: 120px 0 90px;
     text-align: center;
     margin: 0 auto; }
