@@ -5,8 +5,8 @@
     <description></description>
     <link>http://pratikgarg.com/</link>
     <atom:link href="http://pratikgarg.com/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 24 Jan 2015 11:42:46 +0530</pubDate>
-    <lastBuildDate>Sat, 24 Jan 2015 11:42:46 +0530</lastBuildDate>
+    <pubDate>Sat, 24 Jan 2015 11:52:04 +0530</pubDate>
+    <lastBuildDate>Sat, 24 Jan 2015 11:52:04 +0530</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
     
       <item>
@@ -67,7 +67,7 @@ The crime data has been taken from &lt;a href=&quot;http://www.data.gov.in/keywo
 
 &lt;p&gt;&lt;img src=&quot;/assets/article_images/boundaries.png&quot; alt=&quot;India State Boundaries&quot;&gt;&lt;/p&gt;
 
-&lt;p&gt;The complete code can be found at the &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india&quot;&gt;Github repository&lt;/a&gt;. This repo also contains the coordinates for &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data&quot;&gt;All indian states&lt;/a&gt;. &lt;/p&gt;
+&lt;p&gt;The complete code can be found at the &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india&quot;&gt;Github repository&lt;/a&gt;. This repo also contains the coordinates for &lt;a href=&quot;https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data/states&quot;&gt;All indian states&lt;/a&gt;. &lt;/p&gt;
 </description>
         <pubDate>Thu, 15 Jan 2015 00:00:00 +0530</pubDate>
         <link>http://pratikgarg.com/2015/01/15/creating-state-boundaries-google-maps.html</link>

@@ -72,4 +72,4 @@ The crime data has been taken from [gov.data.in](http://www.data.gov.in/keywords
 
 ![India State Boundaries](/assets/article_images/boundaries.png)
 
-The complete code can be found at the [Github repository](https://github.com/PratikGarg/visuals-crime-india). This repo also contains the coordinates for [All indian states](https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data). 
+The complete code can be found at the [Github repository](https://github.com/PratikGarg/visuals-crime-india). This repo also contains the coordinates for [All indian states](https://github.com/PratikGarg/visuals-crime-india/tree/master/src/main/webapp/Data/states). 
