@@ -5,8 +5,8 @@
     <description></description>
     <link>http://pratikgarg.com/</link>
     <atom:link href="http://pratikgarg.com/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 24 Jan 2015 11:10:42 +0530</pubDate>
-    <lastBuildDate>Sat, 24 Jan 2015 11:10:42 +0530</lastBuildDate>
+    <pubDate>Sat, 24 Jan 2015 11:34:05 +0530</pubDate>
+    <lastBuildDate>Sat, 24 Jan 2015 11:34:05 +0530</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
     
       <item>
@@ -62,7 +62,7 @@
 
     &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;A sample application is created to plot crime agaist women from 2001-2012 in India. The boundaries on india states have been created using above mentioned approach.
+&lt;p&gt;&lt;a href=&quot;http://tomcat-gurgaon.rhcloud.com/vci/&quot;&gt;A sample application&lt;/a&gt; is created to plot crime agaist women from 2001-2012 in India. The boundaries on india states have been created using above mentioned approach.
 The crime data has been taken from &lt;a href=&quot;http://www.data.gov.in/keywords/crime-against-women&quot;&gt;gov.data.in&lt;/a&gt;. Here is a visual from the application.&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&quot;/assets/article_images/boundaries.png&quot; alt=&quot;India State Boundaries&quot;&gt;&lt;/p&gt;
